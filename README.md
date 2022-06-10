@@ -11,18 +11,16 @@
   <a href="https://img.shields.io/github/last-commit/redkubes/otomi-core"><img alt="Last commit" src="https://img.shields.io/github/last-commit/redkubes/otomi-core" /></a>
   <a href="https://img.shields.io/crates/l/ap"><img alt="License" src="https://img.shields.io/crates/l/ap" /></a>
   <a href="https://img.shields.io/badge/contributions-welcome-orange.svg"><img alt="Contributions" src="https://img.shields.io/badge/contributions-welcome-orange.svg" /></a>
-  <a href="https://img.shields.io/github/stars/redkubes/otomi-core?style=social"><img alt="GitHub User's stars" src="https://img.shields.io/github/stars/redkubes/otomi-core?style=social"></a>
   <a href="http://otomi.io/"><img src="https://img.shields.io/website-up-down-green-red/http/shields.io.svg" alt="Website otomi.io"></a>
-  <a href="https://twitter.com/intent/tweet?text=Otomi%20self-hosted%20PaaS%20for%20K8s.%20Try%20it%20out!%20&hashtags=OpenSource,Kubernetes,DevOps,Otomi,PaaS&url=https://github.com/redkubes/otomi-core%0a"><img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social" alt="Tweet"></a>
+  <a href="https://join.slack.com/t/otomi/shared_invite/zt-18wo93idx-qFecVX9MzcAAsnfzbliHlg"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=4A154B" alt="Join Slack channel"></a>
+  <a href="https://twitter.com/RedKubes"><img src="https://img.shields.io/static/v1?label=Twitter&message=Follow&color=1DA1F2" alt="Follow us on Twitter"></a>
+  <a href="https://www.facebook.com/groups/otomiusers"><img src="https://img.shields.io/static/v1?label=Facebook&message=Join group&color=1877F2" alt="Join Facebook group"></a>
   <a href="https://www.youtube.com/channel/UCarOB4QW6lTqKG17XUT2uaA"><img alt="YouTube Channel Subscribers" src="https://img.shields.io/youtube/channel/subscribers/UCarOB4QW6lTqKG17XUT2uaA?style=social"></a>
+  <a href="https://img.shields.io/github/stars/redkubes/otomi-core?style=social"><img alt="GitHub User's stars" src="https://img.shields.io/github/stars/redkubes/otomi-core?style=social"></a>
 </p>
 
 <p align="center">
-<a href="https://join.slack.com/t/otomi/shared_invite/zt-18wo93idx-qFecVX9MzcAAsnfzbliHlg">Join our Slack channel for Q&A</a>
-</p>
-
-<p align="center">
-<a href="https://redkubes.com/live-otomi-demo-env/"> 🚀 See Otomi live on Digital Ocean 🚀</a>
+<a href="https://marketplace.digitalocean.com/apps/otomi?refcode=476bfcac9ec9&action=deploy"> 🚀 Start using Otomi on Digital Ocean 🚀</a>
 </p>
 
 `Otomi` brings a full platform experience to Kubernetes without the constraints and abstractions. No more reinventing the wheel when building and maintaining your own K8s based (developer) platform.
@@ -64,35 +62,26 @@ Use the [quickstarts](https://github.com/redkubes/quickstart) for Azure, GCP, AW
 
 ### Workshops
 
-In our [workshops](https://github.com/redkubes/workshops) repository, we have prepared a comprehensive set of hands-on labs to get a good understanding/overview of Otomi.
+In our [workshops](https://github.com/redkubes/workshops) repository, we have prepared a comprehensive set of hands-on labs to get a good understanding/overview of everything Otomi has to offer.
 
 ## 🎉 Otomi Features
 
-✅ Drag and Drop apps to create your own preferred suite
+- [x] Drag and Drop apps to create your own preferred suite
+- [x] GitOps with Argo CD out-of-the-box
+- [x] Container image scanning
+- [x] Advanced ingress architecture
+- [x] Generate validated configuration code
+- [x] Configure network policies for internal ingress and external egress
+- [x] Deploy Knative serverless workloads without writing any YAML
+- [x] Create and manage secrets in HashiCorp Vault and use them in your workloads
+- [x] Create Kubernetes Jobs and Cron Jobs without writing any YAML
+- [x] Role-based access to all integrated applications based on group membership
+- [x] Enforce Pod security policies
+- [x] Onboard teams or projects within minutes in a comprehensive multi-tenant setup
+- [x] Predefined automation tasks
+- [x] Bring your favorite IdP, DNS and/or CA
 
-✅ GitOps with Argo CD out-of-the-box
-
-✅ Advanced ingress architecture. Expose services with just a few clicks
-
-✅ Configure network policies for internal ingress and external egress
-
-✅ Deploy Knative serverless workloads without writing any YAML
-
-✅ Create and manage secrets in HashiCorp Vault and use them in your workloads
-
-✅ Create Kubernetes Jobs and Cron Jobs without writing any YAML
-
-✅ Role-based access to all integrated applications based on group membership
-
-✅ Policy enforcement based on a default set of security policies
-
-✅ Direct access to logs and metrics of your deployed workloads
-
-✅ Onboard new development teams or projects within minutes in a comprehensive multi-tenant setup
-
-✅ Make development teams self-serving by providing access to predefined automation tasks
-
-✅ Bring your favorite IdP, DNS and/or CA
+And much more...
 
 ## 🧑‍💻 Integrated technologies
 
@@ -100,11 +89,11 @@ In our [workshops](https://github.com/redkubes/workshops) repository, we have pr
 
 <p align="center"><img src="https://github.com/redkubes/otomi-core/blob/main/docs/img/tech.png/?raw=true" width="100%" align="center" alt="Integrated technologies"></p>
 
-<details>
- <summary><b>Learn more about all the integrated technologies</b></summary>
+Learn more about all the integrated technologies:
 
 - [Istio](https://github.com/istio/istio): The service mesh framework with end-to-end transit encryption
 - [Argo CD](https://github.com/argoproj/argo-cd): Declarative continuous deployment
+- [KubeClarity](https://github.com/openclarity/kubeclarity): Detect vulnerabilities of container images
 - [Knative](https://github.com/knative/serving): Deploy and manage serverless workloads
 - [Prometheus](https://github.com/prometheus/prometheus): Collecting container application metrics
 - [Loki](https://github.com/grafana/loki): Collecting container application logs
@@ -121,8 +110,6 @@ In our [workshops](https://github.com/redkubes/workshops) repository, we have pr
 - [Gitea](https://github.com/go-gitea/gitea): Self-hosted Git service
 - [Nginx Ingress Controller](https://github.com/kubernetes/ingress-nginx): Ingress controller for Kubernetes
 
-</details>
-
 ## 💪 Otomi Projects
 
 `Otomi` consists out of the following projects:
@@ -135,14 +122,13 @@ In our [workshops](https://github.com/redkubes/workshops) repository, we have pr
 
 ## 📖 Documentation
 
-Check out the [dev docs index](./docs/index.md) for developer documentation or go to [otomi.io](https://otomi.io) for more detailed documentation and [tutorials](https://otomi.io/docs/tutorials/).
+Check out the [dev docs index](./docs/index.md) for developer documentation or go to [otomi.io](https://otomi.io) for more detailed documentation.
 
 ## 🤝 Contribution
 
 If you wish to contribute please read our [Contributor Code of Conduct](https://otomi.io/community/code-of-conduct) and [Contribution Guidelines](https://otomi.io/community/get-involved).
 
 If you want to say **thank you** or/and support the active development of `Otomi`:
-main
 
 - Add a [GitHub Star](https://github.com/redkubes/otomi-core) to the project
 - Feel free to write articles about the project on [dev.to](https://dev.to/), [medium](https://medium.com/) or on your personal blog as we are curious to see how you use `Otomi`
