@@ -26,13 +26,13 @@
     "ignore-walk": "3.0.4",
     "js-yaml": "4.1.0",
     "lodash": "4.17.21",
-    "node-fetch": "2.6.7",
+    "node-fetch": "3.2.10",
     "node-forge": "1.3.0",
     "semver": "7.3.7",
     "tar": "6.1.11",
     "validator": "13.7.0",
     "yargs": "17.5.1",
-    "zx": "4.3.0"
+    "zx": "5.0.0"
   },
   "description": "Otomi Core is an opinionated stack of Kubernetes apps and configurations. Part of Otomi Container Platform.",
   "devDependencies": {
