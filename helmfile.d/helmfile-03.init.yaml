@@ -33,13 +33,17 @@ releases:
   - name: knative-serving-artifacts
     installed: {{ $a | get "knative.enabled" }}
     namespace: knative-serving
+    needs: [default/knative-operator]
+    # we have to disable validation as helmfile has a bug (it aggregates all manifests for all deps):
+    # https://github.com/helmfile/helmfile/issues/208 (TODO: check for updates)
+    disableValidationOnInstall: true
     chart: ../charts/raw
     labels:
       init: true
       pkg: knative
     values:
       - ../values/knative/knative-serving-raw.gotmpl
-    <<: *preUpgrade
+    <<: *upgrade
   - name: knative-operator
     installed: {{ $a | get "knative.enabled" }}
     namespace: default
@@ -55,8 +59,11 @@ releases:
     <<: *raw
   - name: vault-operator
     installed: {{ $a | get "vault.enabled" }}
-    disableValidationOnInstall: true
     namespace: vault
+    chart: ../charts/vault-operator
     labels:
       pkg: vault
-    <<: *default
+    values:
+      - ../values/vault-operator/vault-operator.gotmpl
+      - {{- $v.apps.vault | get "_rawValues" dict | toYaml | nindent 8 }}
+    <<: *upgrade

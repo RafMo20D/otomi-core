@@ -1,10 +1,11 @@
 import { mkdirSync, rmdirSync, writeFileSync } from 'fs'
+import { isEmpty } from 'lodash'
 import { Argv, CommandModule } from 'yargs'
 import { $, nothrow } from 'zx'
 import { prepareDomainSuffix } from '../common/bootstrap'
 import { cleanupHandler, prepareEnvironment } from '../common/cli'
 import { logLevelString, terminal } from '../common/debug'
-import { env, isChart } from '../common/envalid'
+import { env, isCli } from '../common/envalid'
 import { hf } from '../common/hf'
 import { getDeploymentState, setDeploymentState } from '../common/k8s'
 import { getFilename } from '../common/utils'
@@ -12,6 +13,7 @@ import { getCurrentVersion, getImageTag } from '../common/values'
 import { getParsedArgs, HelmArguments, helmOptions, setParsedArgs } from '../common/yargs'
 import { ProcessOutputTrimmed } from '../common/zx-enhance'
 import { commit } from './commit'
+import { upgrade } from './upgrade'
 
 const cmdName = getFilename(__filename)
 const dir = '/tmp/otomi/'
@@ -31,8 +33,8 @@ const setup = (): void => {
 const applyAll = async () => {
   const d = terminal(`cmd:${cmdName}:applyAll`)
   const argv: HelmArguments = getParsedArgs()
+  await upgrade({ when: 'pre' })
   d.info('Start apply all')
-
   const prevState = await getDeploymentState()
   d.debug(`Deployment state: ${JSON.stringify(prevState)}`)
   const tag = await getImageTag()
@@ -52,7 +54,7 @@ const applyAll = async () => {
   writeFileSync(templateFile, templateOutput)
   await $`kubectl apply -f ${templateFile}`
   await nothrow(
-    $`if ! kubectl replace -f charts/prometheus-operator/crds; then kubectl create -f charts/prometheus-operator/crds; fi`,
+    $`if ! kubectl replace -f charts/kube-prometheus-stack/crds; then kubectl create -f charts/kube-prometheus-stack/crds; fi`,
   )
   d.info('Deploying charts containing label stage=prep')
   await hf(
@@ -75,8 +77,9 @@ const applyAll = async () => {
     },
     { streams: { stdout: d.stream.log, stderr: d.stream.error } },
   )
+  await upgrade({ when: 'post' })
   if (!env.DISABLE_SYNC)
-    if (isChart || !prevState.status)
+    if (!isCli || isEmpty(prevState.status))
       // commit first time when not deployed only, always commit in chart (might have previous failure)
       await commit(true) // will set deployment state after
     else await setDeploymentState({ status: 'deployed' })
@@ -96,7 +99,7 @@ const apply = async (): Promise<void> => {
       fileOpts: argv.file,
       labelOpts: argv.label,
       logLevel: logLevelString(),
-      args: ['apply', skipCleanup],
+      args: ['apply', '--include-needs', skipCleanup],
     },
     { streams: { stdout: d.stream.log, stderr: d.stream.error } },
   )

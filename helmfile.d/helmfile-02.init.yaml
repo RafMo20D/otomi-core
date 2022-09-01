@@ -12,25 +12,34 @@ bases:
 {{- $a := $v.apps }}
 
 releases:
-  - name: aws-ebs-csi-driver
-    installed: {{ $a | get "aws-ebs-csi-driver.enabled" }}
+  - name: snapshot-controller
+    installed: {{ $a | get "snapshot-controller.enabled" }}
     namespace: kube-system
     labels:
       init: true
       pkg: csi
       provider: aws 
     <<: *default
-  - name: gatekeeper
-    installed: {{ $a | get "gatekeeper.enabled" }}
-    namespace: gatekeeper-system
-    chart: ../charts/gatekeeper
-    disableValidationOnInstall: true
+  - name: metrics-server
+    installed: {{ $a | get "metrics-server.enabled" }}
+    namespace: kube-system
+    <<: *default
+  - name: tigera-operator
+    installed: {{ $a | get "tigera-operator.enabled" }}
+    namespace: tigera-operator
     labels:
-      pkg: gatekeeper
-    values:
-      - ../values/gatekeeper/gatekeeper.gotmpl
-      - snippets/common.gotmpl
-    <<: *preUpgrade
+      init: true
+      pkg: calico
+    <<: *default
+  - name: aws-ebs-csi-driver
+    installed: {{ $a | get "aws-ebs-csi-driver.enabled" }}
+    needs: [snapshot-controller]
+    namespace: kube-system
+    labels:
+      init: true
+      pkg: csi
+      provider: aws 
+    <<: *default
   - name: ingress-nginx-artifacts
     installed: true
     namespace: ingress
@@ -51,11 +60,10 @@ releases:
     chart: ../charts/ingress-nginx
     values:
       - ../values/ingress-nginx/ingress-nginx.gotmpl
-    <<: *preUpgrade
+    <<: *upgrade
 {{- end }}
   - name: operator-lifecycle-manager
     installed: true
-    disableValidationOnInstall: true
     namespace: operator-lifecycle-manager
     labels:
       olm: true

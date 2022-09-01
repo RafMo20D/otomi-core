@@ -3,7 +3,7 @@ environments:
     values:
       - azure:
           appgw:
-            isManaged: true
+            isManaged: false
         apps:
           alertmanager:
             enabled: false
@@ -16,15 +16,22 @@ environments:
               targetCPUUtilizationPercentage: 50
           cert-manager:
             issuer: custom-ca
+          cluster-overprovisioner:
+            enabled: false
           demo-tlspass:
             enabled: false
           drone:
             enabled: true
+            debug: false
+            trace: false
             sourceControl:
               provider: gitea
               username: otomi-admin
           external-dns:
             domainFilters: []
+          external-secrets:
+            logLevel: info
+            pollingInterval: 60000
           gatekeeper:
             enabled: false
             auditFromCache: false
@@ -33,7 +40,7 @@ environments:
             disableValidatingWebhook: true
             emitAdmissionEvents: false
             emitAuditEvents: false
-            logLevel: "INFO"
+            logLevel: INFO
             replicas: 1
           gitea:
             enabled: true
@@ -74,12 +81,11 @@ environments:
               ingressgateway:
                 minReplicas: 1
                 maxReplicas: 10
-              ingressgateway-private:
-                minReplicas: 1
-                maxReplicas: 10
               pilot:
                 minReplicas: 1
                 maxReplicas: 10
+            egressGateway:
+              enabled: false
           jaeger:
             enabled: false
           keycloak:
@@ -110,11 +116,16 @@ environments:
                 maxReplicas: 10
           kubeclarity:
             enabled: false
-            logLevel: "warning"
+            logLevel: warning
           kube-descheduler:
             enabled: false
           loki:
             enabled: false
+          metrics-server:
+            apiServer:
+              create: true
+            extraArgs:
+              kubelet-preferred-address-types: InternalIP
           oauth2-proxy: {}
           oauth2-proxy-redis: {}
           otomi-api: {}
@@ -124,6 +135,8 @@ environments:
           prometheus-blackbox-exporter: {}
           prometheus:
             enabled: false
+            replicas: 1
+            scrapeInterval: 60s
             retentionSize: 4GB
             storageSize: 5Gi
           redis-shared:
@@ -142,7 +155,6 @@ environments:
           hasExternalDNS: false
           hasExternalIDP: false
           isHomeMonitored: false
-          isManaged: true
           isMultitenant: false
         teamConfig: {}
         letsencryptRootCA: |

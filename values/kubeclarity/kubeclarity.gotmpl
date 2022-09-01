@@ -4,11 +4,26 @@
 global:
   databasePassword: {{ $k | get "databasePassword" }}
 
+kubeclarity:
+  logLevel: {{ $k.logLevel }}
+  podAnnotations:
+    policy.otomi.io/ignore: "banned-image-tags"
+
 kubeclarity-postgresql:
   fullnameOverride: kubeclarity-postgresql
-
-kubeclarity:
-  logLevel: {{ $k.logLevel }}  
-
-
+  metrics:
+    enabled: true
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128M
+      requests:
+        cpu: 50m
+        memory: 64M
+    securityContext:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        prometheus: system
 

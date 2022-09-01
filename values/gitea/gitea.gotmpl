@@ -89,7 +89,8 @@ gitea:
     session:
       COOKIE_SECURE: true
       DOMAIN: {{ $giteaDomain }}
-      
+    webhook:
+      ALLOWED_HOST_LIST: "*"
     server:
       DOMAIN: {{ $giteaDomain }}
       ROOT_URL: "https://{{ $giteaDomain }}/"
@@ -137,9 +138,29 @@ memcached:
       cpu: 100m
       memory: 128Mi
     {{- end }}
+  metrics:
+    enabled: true
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128M
+      requests:
+        cpu: 50m
+        memory: 64M
+    securityContext:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      selector:
+        prometheus: system
+
 
 persistence:
+  {{- if eq $v.cluster.provider "vultr" }}
+  size: 10Gi
+  {{- else }}
   size: 1Gi
+  {{- end }}
 
 postgresql:
   # @TODO:
@@ -150,7 +171,11 @@ postgresql:
     image:
       tag: 0.10.0
   persistence:
+    {{- if eq $v.cluster.provider "vultr" }}
+    size: 10Gi
+    {{- else }}
     size: 1Gi
+    {{- end }}
   global:
     postgresql:
       postgresqlPassword: {{ $g | get "postgresqlPassword" }}
@@ -166,6 +191,21 @@ postgresql:
       cpu: 250m
       memory: 256Mi
     {{- end }}
+  metrics:
+    enabled: true
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128M
+      requests:
+        cpu: 50m
+        memory: 64M
+    securityContext:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        prometheus: system
 
 {{- if $v._derived.untrustedCA }}
 extraVolumeMounts:

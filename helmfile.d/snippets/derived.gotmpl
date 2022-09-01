@@ -45,7 +45,13 @@ environments:
               {{- $v.letsencryptRootCA | nindent 12 }}
               {{- $v.letsencryptCA | nindent 12 }}
             {{- else }}
-              {{- $cm | get "customRootCA" "" | nindent 12 }}
+              {{- $cm.customRootCA | nindent 12 }}
+            {{- end }}
+          caCertRoot: |
+            {{- if eq $issuer "letsencrypt" }}
+              {{- $v.letsencryptRootCA | nindent 12 }}
+            {{- else }}
+              {{- $cm.customRootCA | nindent 12 }}
             {{- end }}
           supportedCloud: {{ has $provider (list "aws" "azure" "google") }}
           untrustedCA: {{ $untrustedCA }}
@@ -64,9 +70,7 @@ environments:
             stage: production
           {{- end }}
           cluster-autoscaler:
-            enabled: {{ eq $provider "aws" }}
-          cluster-overprovisioner:
-            enabled: {{ $a | get "cluster-overprovisioner.enabled" (has $provider (list "custom" "kind")) }}
+            enabled: {{ $a | get "cluster-autoscaler.enabled" (has $provider (list "aws")) }}
           {{- if eq $droneProvider "gitea" }}
           drone:
             sourceControl:
@@ -87,6 +91,8 @@ environments:
             registry:
               credentials:
                 password: {{ $a | get "harbor.registry.credentials.password" $v.otomi.adminPassword }}
+          gatekeeper:
+            enabled: {{ or ($a | get "gatekeeper.enabled" false) (hasKey $v.otomi "nodeSelector") }}
           gitea:
             enabled: {{ and (eq $droneProvider "gitea") (eq ($a | get "drone.sourceControl.gitea.server" $giteaUrl) $giteaUrl) }}
             adminPassword: {{ $a | get "gitea.adminPassword" $v.otomi.adminPassword }}
@@ -102,10 +108,6 @@ environments:
             enabled: {{ $a | get "kured.enabled" (has $provider (list "azure")) }}
           metrics-server:
             enabled: {{ $a | get "metrics-server.enabled" (has $provider (list "custom" "aws" "digitalocean")) }}
-            apiServer:
-              create: {{ $a | get "metrics-server.apiServer.create" true }}
-            extraArgs:
-              kubelet-preferred-address-types: {{ $a | get "metrics-server.extraArgs.kubelet-preferred-address-types" "InternalIP" }}
           prometheus-msteams:
             enabled: {{ and ($a | get "alertmanager.enabled" false) (or (has "msteams" ($v | get "alerts.receivers" list)) (has "msteams" ($v | get "home.receivers" list))) }}
           snapshot-controller:

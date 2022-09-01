@@ -17,6 +17,11 @@ resources:
     memory: 384Mi
   {{- end }}
 
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    prometheus: system
+
 securityContext:
   readOnlyRootFilesystem: true
   runAsGroup: 0
@@ -51,7 +56,7 @@ pipelineStages:
   {{- end }}
   {{- end }}
 
-priorityClassName: "otomi-critical"
+priorityClassName: otomi-critical
 config:
   server:
     log_level: error

@@ -111,6 +111,13 @@ export const gucci = async (
   }
 }
 
+export const guccify = async (str: string, ctx: { [key: string]: any }): Promise<string> => {
+  const escaped = str.replaceAll('\n', '@@').replace(/([^{{]+|{{[^}]*}})/g, (match, token) => {
+    return token.includes('{{') ? token : token.replaceAll('$', '##')
+  })
+  return ((await gucci(escaped, ctx, true)) as string).replaceAll('##', '$').replaceAll('@@', '\n')
+}
+
 export const extract = (schema: Record<string, any>, leaf: string, mapValue = (val: any) => val): any => {
   const schemaKeywords = ['properties', 'anyOf', 'allOf', 'oneOf', 'default', 'x-secret', 'x-acl']
   return Object.keys(schema)
@@ -162,4 +169,22 @@ export const providerMap = (provider: string): string => {
     google: 'gke',
   }
   return map[provider] ?? provider
+}
+
+/**
+ * Compare semver version strings, returning -1, 0, or 1.
+ * If the semver string a is greater than b, return 1. If the semver string b is greater than a, return -1. If a equals b, return 0
+ */
+export const semverCompare = (a, b) => {
+  const pa = a.split('.')
+  const pb = b.split('.')
+  for (let i = 0; i < 3; i++) {
+    const na = Number(pa[i])
+    const nb = Number(pb[i])
+    if (na > nb) return 1
+    if (nb > na) return -1
+    if (!Number.isNaN(na) && Number.isNaN(nb)) return 1
+    if (Number.isNaN(na) && !Number.isNaN(nb)) return -1
+  }
+  return 0
 }
