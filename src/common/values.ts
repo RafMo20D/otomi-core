@@ -133,9 +133,10 @@ export const writeValuesToFile = async (
         await encrypt(targetPath)
         await decrypt(targetPath)
         return
-      } else await writeFile(targetPath, objectToYaml(useValues))
+      }
+      await writeFile(targetPath, objectToYaml(useValues))
+      return
     }
-    return
   }
   if (isEqual(originalValues, useValues)) {
     d.info(`No changes for ${targetPath}${suffix}, skipping...`)
@@ -196,7 +197,7 @@ export const writeValues = async (inValues: Record<string, any>, overwrite = fal
   if (plainValues.policies || overwrite)
     promises.push(writeValuesToFile(`${env.ENV_DIR}/env/policies.yaml`, { policies: plainValues.policies }, overwrite))
   if (plainValues.teamConfig || overwrite) {
-    const types = ['apps', 'jobs', 'secrets', 'services', 'workloads']
+    const types = ['apps', 'backups', 'builds', 'jobs', 'secrets', 'services', 'workloads']
     const fileMap = { secrets: 'external-secrets' }
     const teamConfig = plainValues.teamConfig ? cloneDeep(plainValues.teamConfig) : {}
     // eslint-disable-next-line @typescript-eslint/no-misused-promises

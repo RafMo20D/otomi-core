@@ -7,6 +7,8 @@
   "ignoreRegExpList": ["/'s\\b/"],
   "ignoreWords": [
     "adrs",
+    "trivy",
+    "grype",
     "KUBECFG",
     "CNAME",
     "SBOM",
@@ -71,7 +73,9 @@
     "minio",
     "vultr",
     "ovh",
-    "thanos"
+    "thanos",
+    "Paketo",
+    "tekton"
   ],
   "language": "en",
   "words": [
@@ -121,6 +125,7 @@
     "kubectl",
     "kubeclarity",
     "kubernetes",
+    "kpack",
     "millicores",
     "minikube",
     "modsecurity",
@@ -159,6 +164,7 @@
     "unencrypted",
     "untrusted",
     "velero",
+    "tekton",
     "xlarge"
   ]
 }
