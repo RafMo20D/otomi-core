@@ -2,7 +2,6 @@
 cluster:
   k8sVersion: 'K8S_VERSION_PLACEHOLDER'
   name: 'dev'
-  provider: digitalocean
   k8sContext: CONTEXT_PLACEHOLDER
 otomi:
   isMultitenant: true
@@ -42,8 +41,6 @@ apps:
     enabled: true
   loki:
     enabled: true
-  metrics-server:
-    enabled: true
   minio:
     enabled: true
   prometheus:
@@ -55,6 +52,8 @@ apps:
   snapshot-controller:
     enabled: true
   tigera-operator:
+    enabled: true
+  thanos:
     enabled: true
   vault:
     enabled: true
