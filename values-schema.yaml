@@ -282,8 +282,6 @@ definitions:
       k8sContext:
         $ref: '#/definitions/k8sContext'
         description: Optional. Must be set for development mode and must point to an existing context in KUBECONFIG.
-      k8sVersion:
-        $ref: '#/definitions/k8sVersion'
       name:
         $ref: '#/definitions/clusterName'
         description: Short name that will be used in construction of cluster domain and messaging.
@@ -298,7 +296,6 @@ definitions:
         examples:
           - eu-central-1
     required:
-      - k8sVersion
       - name
       - provider
     allOf:
@@ -602,13 +599,6 @@ definitions:
   k8sContext:
     description: The cluster k8s context as found in $KUBECONFIG.
     $ref: '#/definitions/wordCharacterPattern'
-  k8sVersion:
-    description: The cluster k8s version. Must match one of the list.
-    enum:
-      - '1.23'
-      - '1.24'
-      - '1.25'
-    type: string
   labels:
     $ref: '#/definitions/labelsAnnotations'
     description: A set of labels.
@@ -1121,6 +1111,18 @@ definitions:
         description: Will pass the request to the backing service without TLS termination.
         type: boolean
         default: false
+      useCname:
+        description: Will configure additional host(CNAME) for the service.
+        type: boolean
+        default: false
+      cname:
+        properties:
+          domain:
+            description: CNAME of the service.
+            type: string
+          tlsSecretName:
+            description: Kubernetes secret name of type TLS (not required if the tlsPass flag is set to true).
+            type: string
       type:
         nullable: true
         default: public
@@ -1322,21 +1324,6 @@ definitions:
       tag:
         description: Image tag
         $ref: '#/definitions/imageTag'
-      repoAccess:
-        properties:
-          privateGit:
-            type: boolean
-            default: false
-          otomiGit:
-            type: boolean
-            default: false
-          repoUserName:
-            description: The username used for basic authentication to access a private github repo.
-            $ref: '#/definitions/wordCharacterPattern'
-          repoPassword:
-            x-secret: ''
-            $ref: '#/definitions/wordCharacterPattern'
-            description: The password used for basic authentication to access a private github repo.
       mode:
         properties:
           docker:
@@ -1582,6 +1569,13 @@ properties:
             $ref: '#/definitions/rawValues'
           resources:
             $ref: '#/definitions/resources'
+          byoWildcardCert:
+            description: 'Bring your own trusted wildcard certificate. Only applicable for byo-wildcard-cert issuer'
+            type: string
+          byoWildcardCertKey:
+            description: 'A certificate key corresponding to the byoWildcardCert.'
+            type: string
+            x-secret: ''
           customRootCA:
             x-secret: ''
             type: string
@@ -1593,10 +1587,16 @@ properties:
           email:
             $ref: '#/definitions/email'
           issuer:
+            description: |
+              Indicates the origin of the wildcard certificate. 
+              The custom-ca - cert-manager uses the customRootCA to generate wildcard certificate.
+              The letsencrypt - cert-manager requests certificate from letsencrypt endpoint.
+              The byo-wildcard-cert allows users to bring their own trusted wildcard certificate (cert-manager not involved)
             type: string
             enum:
               - custom-ca
               - letsencrypt
+              - byo-wildcard-cert
             default: custom-ca
           stage:
             type: string
@@ -1604,22 +1604,6 @@ properties:
               - production
               - staging
             default: production
-        oneOf:
-          - properties:
-              issuer:
-                const: letsencrypt
-            required:
-              - email
-              - issuer
-          - properties:
-              issuer:
-                const: custom-ca
-            required:
-              - issuer
-          - not:
-              anyOf:
-                - required:
-                    - issuer
       cnpg:
         additionalProperties: false
         properties:
@@ -3895,6 +3879,24 @@ properties:
                 $ref: '#/definitions/backupTtl'
               schedule:
                 $ref: '#/definitions/backupSchedule'
+  databases:
+    properties:
+      keycloak:
+        title: Keycloak
+        properties:
+          useOtomiDB:
+            type: boolean
+            default: false
+          size:
+            type: string
+          resources:
+            $ref: '#/definitions/resources'
+          replicas:
+            type: integer
+            default: 2
+          imported:
+            type: boolean
+            default: false
   teamConfig:
     additionalProperties: false
     patternProperties:
