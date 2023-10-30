@@ -1,11 +1,13 @@
+# syntax=docker/dockerfile:1.6
+# The above is needed for the "--checksum" argument to work in the ADD instruction
 FROM ubuntu:20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 # https://github.com/kubernetes/kubernetes/releases
-ARG KUBECTL_VERSION=1.25.13
+ARG KUBECTL_VERSION=1.26.9
 # https://github.com/helm/helm/tags
-ARG HELM_VERSION=3.11.3
+ARG HELM_VERSION=3.12.3
 # https://github.com/databus23/helm-diff/releases
 ARG HELM_DIFF_VERSION=3.8.0
 # https://github.com/jkroepke/helm-secrets/releases
@@ -41,6 +43,7 @@ RUN apt-get update -qq \
   curl \
   gettext \
   git \
+  gnupg \
   gnupg2 \
   groff \
   locales \
@@ -78,7 +81,7 @@ WORKDIR $APP_HOME
 ENV PATH $PATH:$APP_HOME
 
 # kubectl
-ADD https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl kubectl
+ADD --checksum=sha256:98ea4a13895e54ba24f57e0d369ff6be0d3906895305d5390197069b1da12ae2 https://dl.k8s.io/release/v$KUBECTL_VERSION/bin/linux/amd64/kubectl .
 RUN chmod +x kubectl
 
 # sops
@@ -124,8 +127,14 @@ ADD https://github.com/plexsystems/konstraint/releases/download/v${KONSTRAINT_VE
 RUN mv /tmp/konstraint-linux-amd64 konstraint && chmod +x konstraint
 
 # node
-RUN curl -sL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
-RUN apt-get install -y nodejs && \
+# https://github.com/nodesource/distributions
+RUN set -uex && \
+  mkdir -p /etc/apt/keyrings && \
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+  NODE_MAJOR=${NODE_VERSION} && \
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
+  apt-get update && \
+  apt-get install nodejs -y && \
   npm install -g ajv-cli@v3.3.0 json-dereference-cli@0.1.2 zx
 
 RUN chown -R app:app /home/app

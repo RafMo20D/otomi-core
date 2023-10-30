@@ -21,12 +21,11 @@ cloud:
 dns:
     domainFilters:
         - otomi.cloud
-    provider:
-        aws:
-            credentials: {}
-            region: eu-central-1
-    zoneIdFilters:
-        - otomi
+    # provider:
+    #     aws:
+    #         region: eu-central-1
+    # zoneIdFilters:
+    #     - otomi
 e2e:
     enabled: true
 home:
@@ -127,4 +126,4 @@ status:
         deployingVersion: 0.21.0
         status: deployed
         version: 0.21.0
-version: 13
+version: 15

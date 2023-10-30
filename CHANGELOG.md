@@ -2,6 +2,89 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.1.0](https://github.com/redkubes/otomi-core/compare/v1.0.0...v1.1.0) (2023-10-17)
+
+
+### Features
+
+* add civo provider ([#1311](https://github.com/redkubes/otomi-core/issues/1311)) ([0ab2617](https://github.com/redkubes/otomi-core/commit/0ab26179be7fb25025fb2167bbf4ddd3a43779fb))
+* enhnace Otomi job security context ([#1322](https://github.com/redkubes/otomi-core/issues/1322)) ([0669e98](https://github.com/redkubes/otomi-core/commit/0669e985701afbf50e36b61d45cbd757aacb7b43))
+* optimise generating gitea job configuration ([#1327](https://github.com/redkubes/otomi-core/issues/1327)) ([3342ac5](https://github.com/redkubes/otomi-core/commit/3342ac513a774416006a0adc33819ad8bb0d7c80))
+* set otomi chart verion 1.0 ([1840df7](https://github.com/redkubes/otomi-core/commit/1840df7a3c5beb5d8d7738af6c0dfc95bcb683c5))
+* workload improvements ([#1310](https://github.com/redkubes/otomi-core/issues/1310)) ([5606a25](https://github.com/redkubes/otomi-core/commit/5606a25cd601aa823b94e7c8a2482e79ddb64c84))
+
+
+### Bug Fixes
+
+* auto image annotations and fixtures ([#1317](https://github.com/redkubes/otomi-core/issues/1317)) ([96c390b](https://github.com/redkubes/otomi-core/commit/96c390b917bd385029a874daa0c544023eaf748f))
+* dockerfile otomi tools script ([#1319](https://github.com/redkubes/otomi-core/issues/1319)) ([829e404](https://github.com/redkubes/otomi-core/commit/829e4040d52770f7e151736f313b057311740139))
+* falco, jaeger and kubeclarity not shared ([#1306](https://github.com/redkubes/otomi-core/issues/1306)) ([047ab76](https://github.com/redkubes/otomi-core/commit/047ab762aba77fb817f747973709788d936137d8))
+* incorrect defaults in backup schedule ([#1318](https://github.com/redkubes/otomi-core/issues/1318)) ([99d9e2f](https://github.com/redkubes/otomi-core/commit/99d9e2f72fa123cee6450838c3232f98aae85629))
+* keycloak theme ([#1326](https://github.com/redkubes/otomi-core/issues/1326)) ([df2bed9](https://github.com/redkubes/otomi-core/commit/df2bed969f3460b64315c97c85ab935adc28f341))
+* readme [ci skip] ([dc4979a](https://github.com/redkubes/otomi-core/commit/dc4979a3b6398cc49c31c3fbab5518bf406d39ea))
+* readme [ci skip] ([8499f08](https://github.com/redkubes/otomi-core/commit/8499f0880ad8e43c1f572787a099578462184caf))
+* readme for 1.0.0 ([#1312](https://github.com/redkubes/otomi-core/issues/1312)) ([20f7b83](https://github.com/redkubes/otomi-core/commit/20f7b835842d221b27a2608b10275a2e5d4e710e))
+* remove tempo link and tempo team app ([#1304](https://github.com/redkubes/otomi-core/issues/1304)) ([42fcc8a](https://github.com/redkubes/otomi-core/commit/42fcc8ac8e4d3948138a126d99d66aef91bde3e5))
+* set versions to main ([71d9430](https://github.com/redkubes/otomi-core/commit/71d9430716922e70da585795d4fc6d7bd4859f0e))
+* use kc theme jar ([#1323](https://github.com/redkubes/otomi-core/issues/1323)) ([9b67d1b](https://github.com/redkubes/otomi-core/commit/9b67d1b2a3f8214eae3a4f26d4784d30ea61f18e))
+
+
+### Tests
+
+* use relative path ([#1315](https://github.com/redkubes/otomi-core/issues/1315)) ([21584e5](https://github.com/redkubes/otomi-core/commit/21584e598fd1034754d2c5dbcaaee61208e9ebf1))
+
+
+### Others
+
+* versions ([#1332](https://github.com/redkubes/otomi-core/issues/1332)) ([f7e406d](https://github.com/redkubes/otomi-core/commit/f7e406dd584aa7363402d6959c48d904cfcc384d))
+
+## [1.0.0](https://github.com/redkubes/otomi-core/compare/v0.26.0...v1.0.0) (2023-10-05)
+
+
+### Features
+
+* add customised ingress for harbor ([#1265](https://github.com/redkubes/otomi-core/issues/1265)) ([1a85c23](https://github.com/redkubes/otomi-core/commit/1a85c234ccb4498e2ab8f12a9e78107df7caebc4))
+* add support for k8s 1.27 ([#1305](https://github.com/redkubes/otomi-core/issues/1305)) ([16ffbbc](https://github.com/redkubes/otomi-core/commit/16ffbbc34b3f40ccbfa5ff32c2283d0d7c9aca50))
+* added less to the tty console ([#1296](https://github.com/redkubes/otomi-core/issues/1296)) ([c4186f6](https://github.com/redkubes/otomi-core/commit/c4186f6275daacffead238e191ea5e8394d5dbde))
+* auto image updater ([#1236](https://github.com/redkubes/otomi-core/issues/1236)) ([73e086d](https://github.com/redkubes/otomi-core/commit/73e086dd90156935e46c7ffa78ce97ea53d082fb))
+* keycloak upgrade ([#1280](https://github.com/redkubes/otomi-core/issues/1280)) ([e9994d7](https://github.com/redkubes/otomi-core/commit/e9994d7bd9f377c646d515299de894d0502f9533))
+* load database configurations ([#1270](https://github.com/redkubes/otomi-core/issues/1270)) ([cd73f9c](https://github.com/redkubes/otomi-core/commit/cd73f9cbbd829d79bb6a23b3c416b89664253b57))
+* oidc gitea team groups mapping ([#1275](https://github.com/redkubes/otomi-core/issues/1275)) ([c1aed40](https://github.com/redkubes/otomi-core/commit/c1aed405a5a938307c4310de4fac850ae51d6c9c))
+* prometheus with its own host ([#1273](https://github.com/redkubes/otomi-core/issues/1273)) ([b160f5f](https://github.com/redkubes/otomi-core/commit/b160f5f53da441881f6ef41dd9e5b3e10bf5b2fb))
+* set holdApplicationUntilProxyStarts flag in Istio ([#1308](https://github.com/redkubes/otomi-core/issues/1308)) ([c5e0f85](https://github.com/redkubes/otomi-core/commit/c5e0f858f38075bf26d9c04335507ac5295c2d70))
+* set ndots for gitea dns pod config ([#1264](https://github.com/redkubes/otomi-core/issues/1264)) ([40cd95e](https://github.com/redkubes/otomi-core/commit/40cd95ec05c5c42f5400a9c8a2db23483de34d89))
+* Tekton dasboard for platform admins and teams ([#1279](https://github.com/redkubes/otomi-core/issues/1279)) ([8466326](https://github.com/redkubes/otomi-core/commit/84663266defdb32bc9981416544ba3394f7cb0c7))
+* tekton triggers ([#1276](https://github.com/redkubes/otomi-core/issues/1276)) ([4a4a32c](https://github.com/redkubes/otomi-core/commit/4a4a32cdc51979c610492a1926d6b5b64de11b2d))
+* tracing across platform with OpenTelemetry and Grafana Tempo ([#1229](https://github.com/redkubes/otomi-core/issues/1229)) ([5eae206](https://github.com/redkubes/otomi-core/commit/5eae20637afdbcfad2da687c519eabfcfa077139))
+* uninstall admission controllers ([#1268](https://github.com/redkubes/otomi-core/issues/1268)) ([1f262c5](https://github.com/redkubes/otomi-core/commit/1f262c52f58a11573412730031baa57f8fb72a86))
+* use ec2 role for loki s3 access ([#1282](https://github.com/redkubes/otomi-core/issues/1282)) ([31e41bc](https://github.com/redkubes/otomi-core/commit/31e41bc07f7e296e7e7df0a947338ea114c04eb3))
+
+
+### Bug Fixes
+
+* add pull secret to Tekton build ([#1267](https://github.com/redkubes/otomi-core/issues/1267)) ([47038f6](https://github.com/redkubes/otomi-core/commit/47038f6adad0619833e444097938c6c4b08d343d))
+* deployment order for Tekton trigger app ([#1292](https://github.com/redkubes/otomi-core/issues/1292)) ([8e81c82](https://github.com/redkubes/otomi-core/commit/8e81c826dbde6e67d53d836d4fc6893b3698c95b))
+* enhance OTEL app dependencies ([#1291](https://github.com/redkubes/otomi-core/issues/1291)) ([d8e974d](https://github.com/redkubes/otomi-core/commit/d8e974df2db7237553ece22c2fdbd9ccdaba57b1))
+* harbor admin password ([#1285](https://github.com/redkubes/otomi-core/issues/1285)) ([c73e31b](https://github.com/redkubes/otomi-core/commit/c73e31b0513f49b7c5ddc1fd16317ae62dfc1212))
+* hardcoded yq package version ([#1297](https://github.com/redkubes/otomi-core/issues/1297)) ([2f53784](https://github.com/redkubes/otomi-core/commit/2f537845186e58b0d555a9a6907349573ff5d24b))
+* otomi-api credentials to access the values repo ([#1288](https://github.com/redkubes/otomi-core/issues/1288)) ([7188122](https://github.com/redkubes/otomi-core/commit/718812212c12d2014d305a4d73974fafe5b8306a))
+* readme for 26.0 [ci skip] ([d2fd6bb](https://github.com/redkubes/otomi-core/commit/d2fd6bb8da89bd93cb3ac58a3194f6e254665431))
+* trace2logs query ([#1303](https://github.com/redkubes/otomi-core/issues/1303)) ([1dd0a71](https://github.com/redkubes/otomi-core/commit/1dd0a71cb8c10802f962fd67eea6d8454820a805))
+* update strategy in appset ([#1302](https://github.com/redkubes/otomi-core/issues/1302)) ([9100cea](https://github.com/redkubes/otomi-core/commit/9100ceaaf932769b8bcf664d7b9006f941d7c7b8))
+* upgrade legacy datasource query ([#1281](https://github.com/redkubes/otomi-core/issues/1281)) ([7a3f7a1](https://github.com/redkubes/otomi-core/commit/7a3f7a1d0139e51fdfdc2a39e562787aedff955c))
+* wrong uid ([#1301](https://github.com/redkubes/otomi-core/issues/1301)) ([6b8ccc2](https://github.com/redkubes/otomi-core/commit/6b8ccc25128972351a0eecb3d3fb3c432d06af4d))
+
+
+### Others
+
+* add opentelemetry-operator and tempo-distributed community charts  ([#1274](https://github.com/redkubes/otomi-core/issues/1274)) ([676f221](https://github.com/redkubes/otomi-core/commit/676f221d3fba445e2f9a8c227e2e2907176f3884))
+* issue template for supporting new kubenetes version ([#1287](https://github.com/redkubes/otomi-core/issues/1287)) ([5e6c544](https://github.com/redkubes/otomi-core/commit/5e6c544d8f176190bc8d8c81247b5a90f2e7c837))
+* **release:** 0.26.0 ([5e944e8](https://github.com/redkubes/otomi-core/commit/5e944e82578716475cd3292962e52c535b7b42fd))
+* set versions ([#1309](https://github.com/redkubes/otomi-core/issues/1309)) ([c3682fb](https://github.com/redkubes/otomi-core/commit/c3682fb8a2bdcd0be4fc87ca503922ff8a44148c))
+* update helm and kubectl [TOOLS][MINOR] ([#1300](https://github.com/redkubes/otomi-core/issues/1300)) ([05c0326](https://github.com/redkubes/otomi-core/commit/05c0326f7beea9129090bc064ff25a8a9b553f5f))
+* versions ([c295675](https://github.com/redkubes/otomi-core/commit/c2956751f70e1d8089db887e13818bff0e78ee94))
+* versions ([19fbb4b](https://github.com/redkubes/otomi-core/commit/19fbb4be305ee0448e6574701f0d2ecc6ec92814))
+
 ## [0.26.0](https://github.com/redkubes/otomi-core/compare/v0.25.0...v0.26.0) (2023-09-05)
 
 
