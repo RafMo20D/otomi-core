@@ -12,8 +12,6 @@ apps:
     enabled: true
   harbor:
     enabled: true
-  tekton:
-    enabled: true
 teamConfig:
   demo:
     password: somesecretvalue
@@ -22,6 +20,8 @@ teamConfig:
       service:
         - ingress
         - networkPolicy
+    monitoringStack:
+      enabled: false
     networkPolicy:
       egressPublic: true
       ingressPrivate: true
