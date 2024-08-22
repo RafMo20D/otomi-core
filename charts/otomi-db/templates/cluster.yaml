@@ -8,11 +8,9 @@ metadata:
   {{- end }}
 spec:
   instances: {{ .Values.instances }}
-  
   {{- with .Values.imageName }}
   imageName: {{ . }}
   {{- end }}
-
   storage:
     {{- with .Values.storage.storageClass }}
     storageClass: {{ . }}
@@ -23,12 +21,10 @@ spec:
     storageClass: {{ . }}
     {{- end }}
     size: {{ .Values.walStorage.size }}
-
   {{- with .Values.monitoring }}
   monitoring:
     enablePodMonitor: {{ . }}
   {{- end }}
-
   resources:
     {{- with .Values.resources }}
     {{- toYaml . | nindent 4 }}
@@ -40,16 +36,15 @@ spec:
       cpu: 50m
       memory: 256Mi
     {{- end }}
-
   {{- with .Values.clusterAffinity }}
   {{- toYaml . | nindent 2 }}
   {{- end }}
-
+{{- if .Values.backup.enabled }}
   {{- if eq .Values.backup.type "minioLocal" }}
   backup:
     retentionPolicy: {{ .Values.backup.retentionPolicy }}
     barmanObjectStore:
-      destinationPath: s3://database
+      destinationPath: {{ .Values.backup.minioLocal.destinationPath }}
       endpointURL: "http://minio.minio.svc.cluster.local:9000"
       s3Credentials:
         accessKeyId:
@@ -59,43 +54,21 @@ spec:
           name: minio-creds
           key: MINIO_SECRET_KEY
   {{- end }}
-  {{- if eq .Values.backup.type "azure" }}
+  {{- if eq .Values.backup.type "linode" }}
   backup:
     retentionPolicy: {{ .Values.backup.retentionPolicy }}
     barmanObjectStore:
-      destinationPath: "https://{{ .Values.backup.azure.accountName }}.blob.core.windows.net/{{ .Values.backup.azure.containerName }}"
-      azureCredentials:
-        storageAccount:
-          name: azure-creds
-          key: AZURE_STORAGE_ACCOUNT
-        storageKey:
-          name: azure-creds
-          key: AZURE_STORAGE_KEY
-  {{- end }}
-  {{- if eq .Values.backup.type "s3" }}
-  backup:
-  retentionPolicy: {{ .Values.backup.retentionPolicy }}
-    barmanObjectStore:
-      destinationPath: s3://{{ .Values.backup.s3.bucket }}
-      endpointURL: {{ .Values.backup.endpointURL }}
+      destinationPath: {{ .Values.backup.linode.destinationPath }}
+      endpointURL: {{ .Values.backup.linode.endpointURL }}
       s3Credentials:
         accessKeyId:
-          name: s3-creds
+          name: linode-creds
           key: S3_STORAGE_ACCOUNT
         secretAccessKey:
-          name: s3-creds
+          name: linode-creds
           key: S3_STORAGE_KEY
   {{- end }}
-  {{- if eq .Values.backup.type "gcs" }}
-  backup:
-    retentionPolicy: {{ .Values.backup.retentionPolicy }}
-    barmanObjectStore:
-      destinationPath: "gs://{{ .Values.backup.gcs.bucket }}"
-      googleCredentials:
-        applicationCredentials:
-          name: gcs-creds
-          key: gcsCredentials
-  {{- end }}
+{{- end }}
 
   {{- with .Values.clusterSpec }}
   {{- toYaml . | nindent 2 }}

@@ -1,9 +1,8 @@
 apps:
     opencost:
-        enabled: true
         alerts:
-            enabled: true
             costOfAllNodesQuotaPerMonthReached:
                 quota: 500
-        keys:
-            gcp: hshdjdkdlshaga
+            enabled: false
+        enabled: true
+        keys: {}

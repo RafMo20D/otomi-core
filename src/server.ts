@@ -1,10 +1,14 @@
 /* eslint-disable @typescript-eslint/no-misused-promises, @typescript-eslint/require-await */
+import $RefParser from '@apidevtools/json-schema-ref-parser'
 import express, { Request, Response } from 'express'
 import { Server } from 'http'
 import { bootstrapSops } from 'src/cmd/bootstrap'
 import { validateValues } from 'src/cmd/validate-values'
 import { decrypt, encrypt } from 'src/common/crypt'
 import { terminal } from 'src/common/debug'
+import { hfValues } from './common/hf'
+import { loadYaml, rootDir } from './common/utils'
+import { objectToYaml } from './common/values'
 
 const d = terminal('server')
 const app = express()
@@ -54,6 +58,35 @@ app.get('/prepare', async (req: Request, res: Response) => {
     }
     res.status(status).send(err)
   }
+})
+
+function parseBoolean(string, defaultValue = false) {
+  return string === 'true' ? true : string === 'false' ? false : defaultValue
+}
+app.get('/otomi/values', async (req: Request, res: Response) => {
+  const { envDir } = req.query as QueryParams
+
+  const filesOnly = parseBoolean(req.query.filesOnly, true)
+  const excludeSecrets = parseBoolean(req.query.excludeSecrets, true)
+  const withWorkloadValues = parseBoolean(req.query.withWorkloadValues, true)
+  d.log('Get otomi values', req.query)
+  try {
+    const data = await hfValues({ filesOnly, excludeSecrets, withWorkloadValues }, envDir)
+    res.setHeader('Content-type', 'text/plain')
+    const yamlData = objectToYaml(data!)
+    res.status(200).send(yamlData)
+  } catch (error) {
+    const status = 500
+    d.error(error)
+    res.status(status).send(error)
+  }
+})
+
+app.get('/apl/schema', async (req: Request, res: Response) => {
+  const schema = await loadYaml(`${rootDir}/values-schema.yaml`)
+  const derefSchema = await $RefParser.dereference(schema as $RefParser.JSONSchema)
+  res.setHeader('Content-type', 'application/json')
+  res.status(200).send(derefSchema)
 })
 
 export const startServer = (): void => {

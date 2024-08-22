@@ -1,36 +1,57 @@
 teamConfig:
     admin:
         id: admin
+        managedMonitoring:
+            alertmanager: true
+            grafana: true
+            prometheus: true
+        selfService:
+            access:
+                - shell
+                - downloadCertificateAuthority
+            policies:
+                - edit policies
     demo:
         alerts:
+            email: {}
             receivers:
                 - slack
             repeatInterval: 3h
             slack:
                 channel: aaaaa
                 channelCrit: aaaaa
-                url: https://slack.con
+        id: demo
         managedMonitoring:
+            alertmanager: true
             grafana: true
             prometheus: true
-            alertmanager: true
-        billingAlertQuotas:
-            teamCpuMonthQuotaReached:
-                quota: 150
-            teamMemMonthQuotaReached:
-                quota: 200
-        id: demo
         networkPolicy:
             egressPublic: true
-            ingressPrivate: true
+            ingressPrivate: false
         oidc:
             groupMapping: somesecretvalue
         resourceQuota:
             services.loadbalancers: '1'
         selfService:
+            access:
+                - shell
+                - downloadCertificateAuthority
             apps: []
             service:
                 - ingress
-                - networkPolicy
             team:
                 - alerts
+            policies:
+                - edit policies
+    dev:
+        id: dev
+        managedMonitoring:
+            alertmanager: true
+            grafana: true
+            prometheus: true
+        selfService:
+            access:
+                - shell
+                - downloadCertificateAuthority
+            policies:
+                - edit policies

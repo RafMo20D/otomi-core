@@ -7,9 +7,8 @@ on:
       - '*'
 env:
   CACHE_REGISTRY: ghcr.io
-  CACHE_REPO: redkubes/otomi-core
+  CACHE_REPO: linode/apl-core
   REPO: otomi/core
-  GIT_USER: redkubesbot
 
 jobs:
   build-test-cache:
@@ -17,35 +16,29 @@ jobs:
     runs-on: ubuntu-latest
     env:
       COMMIT_MSG: ${{ github.event.head_commit.message }}
+      BOT_EMAIL: ${{ vars.BOT_EMAIL }}
+      BOT_USERNAME: ${{ vars.BOT_USERNAME }}
     steps:
       - name: Set env
         run: |
           tag=${GITHUB_REF##*/}
           echo "Creating tag: $tag"
           echo "TAG=$tag" >> $GITHUB_ENV
-          git config --global user.email $GIT_USER@users.noreply.github.com
-          git config --global user.name $GIT_USER
+          git config --global user.email $BOT_EMAIL
+          git config --global user.name $BOT_USERNAME
+
       - name: Checkout
-        uses: actions/checkout@v3
-      # - name: CI tests, image build and push tag for main or branch
-      #   uses: whoan/docker-build-with-cache-action@v5
-      #   with:
-      #     username: ${{ env.GIT_USER }}
-      #     password: '${{ secrets.NPM_TOKEN }}'
-      #     registry: ${{ env.CACHE_REGISTRY }}
-      #     image_name: ${{ env.CACHE_REPO }}
-      #     image_tag: ${{ env.TAG }}
-      #     pull_image_and_stages: true
+        uses: actions/checkout@v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Login to Github Packages
-        uses: docker/login-action@v2.1.0
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.CACHE_REGISTRY }}
-          username: ${{ env.GIT_USER }}
-          password: '${{ secrets.NPM_TOKEN }}'
+          username: ${{ env.BOT_USERNAME }}
+          password: '${{ secrets.BOT_TOKEN }}'
       - name: CI tests, image build and push tag for main or branch
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           push: true
           tags: |
@@ -55,11 +48,15 @@ jobs:
     needs: build-test-cache
     if: always() && ((contains(needs.build-test-cache.result, 'success') && !contains(needs.integration.outputs.started, 'true')) || (contains(needs.integration.result, 'success'))) && !github.event.act
     runs-on: ubuntu-latest
+    env:
+      BOT_EMAIL: ${{ vars.BOT_EMAIL }}
+      BOT_USERNAME: ${{ vars.BOT_USERNAME }}
     steps:
       - name: Push to docker hub
         run: |
+          set -u
           TAG=${GITHUB_REF##*/}
-          docker login -u $GIT_USER -p '${{ secrets.NPM_TOKEN }}' ghcr.io
+          docker login ghcr.io -u $BOT_USERNAME -p ${{ secrets.BOT_TOKEN }}
           image="$CACHE_REGISTRY/$CACHE_REPO:$TAG"
           docker pull $image
           docker tag $image $REPO:$TAG
@@ -68,6 +65,7 @@ jobs:
       - name: Show me the logic
         run: |
           echo github.ref == ${{ github.ref }}
+
   release:
     needs: push-to-docker
     if: always() && (startsWith(github.ref, 'refs/heads/releases/') || startsWith(github.ref, 'refs/heads/main')) && startsWith(github.event.head_commit.message, 'chore(release)') && !github.event.act
@@ -76,11 +74,11 @@ jobs:
       COMMIT_MSG: ${{ github.event.head_commit.message }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set env
         run: |
-          git config --global user.email $GIT_USER@users.noreply.github.com
-          git config --global user.name $GIT_USER
+          git config --global user.email $BOT_EMAIL
+          git config --global user.name $BOT_USERNAME
       - name: Create and push git tag
         id: git_tag
         run: |
@@ -94,10 +92,10 @@ jobs:
           echo "Releasing $REPO:$release_tag"
           docker tag $REPO:$TAG $REPO:$release_tag
           docker push $REPO:$release_tag
-          docker login -u $GIT_USER -p '${{ secrets.NPM_TOKEN }}' ghcr.io
+          docker login -u $BOT_USERNAME -p '${{ secrets.BOT_TOKEN }}' ghcr.io
           docker tag $REPO:$TAG $CACHE_REGISTRY/$CACHE_REPO:$release_tag
           docker push $CACHE_REGISTRY/$CACHE_REPO:$release_tag
-          echo "machine github.com login $GIT_USER password ${{ secrets.GIT_PASSWORD }}" > ~/.netrc
+          echo "machine github.com login ${{ env.BOT_USERNAME }} password ${{ secrets.BOT_TOKEN }}" > ~/.netrc
           git tag -am "$COMMIT_MSG" $release_tag && git push --follow-tags
           #Cut the CHANGELOG.md file up to the first occurence of the "### \[[0-9]*" (meaning three #, a space,a square bracket and any number after it)
           sed -n '/### \[[0-9]*/q;p' CHANGELOG.md > NEW_CHANGELOG.md
@@ -119,12 +117,12 @@ jobs:
       options: --user 0
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Prepare chart
         id: prepare_chart
         run: |
           # Install and update helm repo
-          helm repo add otomi https://otomi.io/otomi-core
+          helm repo add apl https://linode.github.io/apl-core
           helm repo update
 
           # Retrieve the app version from package.json
@@ -143,28 +141,28 @@ jobs:
 
           # Use jq to parse the output and find the latest version for the given $new_app_major.$new_app_minor app version
           existing_version=$(echo "$helm_output" | jq -r --arg major "$new_app_major" --arg minor "$new_app_minor" '
-            map(select(.app_version | startswith("v\($major).\($minor)"))) | 
-            max_by(.version | split(".") | map(tonumber)) | 
+            map(select(.app_version | startswith("v\($major).\($minor)"))) |
+            max_by(.version | split(".") | map(tonumber)) |
             .version'
           )
 
           # Update Chart.yaml and values.yaml with the new app version
-          sed -i "s/CHART_VERSION_PLACEHOLDER/$app_version/g" chart/otomi/Chart.yaml
-          sed -i "s/APP_VERSION_PLACEHOLDER/v$app_version/g" chart/otomi/Chart.yaml
+          sed -i "s/0.0.0-chart-version/$app_version/g" chart/apl/Chart.yaml
+          sed -i "s/APP_VERSION_PLACEHOLDER/v$app_version/g" chart/apl/Chart.yaml
 
           echo "Chart and values files updated successfully with version $app_version"
 
           # Copy readme from repo into the charts and add tpl/chart-values.md
-          cp README.md chart/otomi/
-          printf "\n\n" >>chart/otomi/README.md
-          cat tpl/chart-values.md >>chart/otomi/README.md
+          cp README.md chart/apl/
+          printf "\n\n" >>chart/apl/README.md
+          cat tpl/chart-values.md >>chart/apl/README.md
 
           # Generate schema
-          npx js-yaml values-schema.yaml > chart/otomi/values.schema.json
+          npx js-yaml values-schema.yaml > chart/apl/values.schema.json
 
           # Set the global id for git as it seems needed by the next step when a custom image is used
-          git config --global user.email $GIT_USER@users.noreply.github.com
-          git config --global user.name $GIT_USER
+          git config --global user.email ${{ env.BOT_EMAIL }}
+          git config --global user.name ${{ env.BOT_USERNAME }}
       - name: Create and publish otomi chart release
         id: chart_release
         uses: helm/chart-releaser-action@v1.6.0
@@ -174,6 +172,93 @@ jobs:
           mark_as_latest: false
         env:
           CR_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+
+  test-otomi-release:
+    name: Test Helm Chart Installation
+    needs: [release, chart-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use Scaleway CLI
+        uses: scaleway/action-scw@v0
+        with:
+          save-config: true
+          export-config: true
+          version: v2.26.0
+          access-key: ${{ secrets.SCW_ACCESS_KEY }}
+          secret-key: ${{ secrets.SCW_SECRET_KEY }}
+          default-project-id: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
+          default-organization-id: ${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }}
+      - name: Pulling the helm chart
+        run: |
+          # Install and update helm repo
+          helm repo add apl https://linode.github.io/apl-core
+          helm repo update
+
+          # Get latest version of otomi
+          latest_version=$(helm search repo otomi -l | grep -m 1 otomi | awk '{print $2}')
+          echo The latest version to be tested is: $latest_version
+      - name: Creating the cluster
+        run: |
+          # Create cluster private network and get ID
+          SCALEWAY_PRIVATE_NETWORK_ID=$(scw vpc private-network create project-id=${{ secrets.SCW_DEFAULT_PROJECT_ID }} name='otomi-test-release' region=nl-ams -ojson | jq -r .id)
+
+          # Get k8s 1.27 patch version
+          K8s_VERSION=$(scw k8s version list -o json | jq -ce '.[] | .name' -r | grep 1.27)
+
+          # Create cluster
+          scw k8s cluster create \
+            name=otomi-test-release \
+            pools.0.node-type=PRO2-M \
+            private-network-id=$SCALEWAY_PRIVATE_NETWORK_ID \
+            auto-upgrade.enable=false \
+            cni=calico \
+            pools.0.name=otomi-test-release \
+            pools.0.size=3 \
+            pools.0.max-size=3 \
+            pools.0.autohealing=true \
+            pools.0.autoscaling=true \
+            pools.0.root-volume-size=50GB \
+            version=$K8s_VERSION \
+            region=nl-ams \
+            project-id=${{ secrets.SCW_DEFAULT_PROJECT_ID }} \
+            --wait
+          echo "Cluster deployed successfully"
+      - name: Installing new otomi release
+        run: |
+          # Get cluster ID and set env var
+          cluster_id=$(scw k8s cluster list region=nl-ams -o json | jq -r '.[] | select(.name == "otomi-test-release") | .id')
+          echo "Cluster ID: $cluster_id"
+          echo SCALEWAY_CLUSTER_ID=$cluster_id >> $GITHUB_ENV
+
+          # Get kubeconfig
+          scw k8s kubeconfig install $cluster_id region=nl-ams
+          echo "Kubeconfig installed successfully"
+
+          # Update values.yaml integration test file
+          SCALEWAY_CLUSTER_CONTEXT=`kubectl config current-context`
+
+          # Install otomi
+          helm install otomi otomi/otomi \
+          --wait --wait-for-jobs --timeout 30m0s \
+          --set cluster.provider=scaleway \
+          --set cluster.name=otomi-test-release \
+          --set cluster.k8sContext=$SCALEWAY_CLUSTER_CONTEXT
+      - name: Gather k8s events on failure
+        if: failure()
+        run: |
+          kubectl get events --sort-by='.lastTimestamp' -A
+      - name: Gather k8s pods on failure
+        if: failure()
+        run: |
+          kubectl get pods -A -o wide
+      - name: Gather otomi logs on failure
+        if: failure()
+        run: |
+          kubectl logs jobs/otomi --tail 150
+      - name: Delete k8s cluster at Scaleway
+        if: always()
+        run: |
+          scw k8s cluster delete ${{ env.SCALEWAY_CLUSTER_ID }} with-additional-resources=true region=nl-ams
 
   notification:
     needs: [build-test-cache, push-to-docker, release, chart-release]
@@ -189,20 +274,3 @@ jobs:
           SLACK_ICON: https://github.com/redkubes.png?size=48
           SLACK_TITLE: CI run
           SLACK_USERNAME: RedKubesBot
-
-  execute-aws-marketplace:
-    name: AWS Dispatch
-    needs: chart-release
-    if: always() && contains(needs.chart-release.result, 'success') && !github.event.act
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.ACTIONS_KEY }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: 'redkubes',
-              repo: 'aws-marketplace',
-              workflow_id: 'deploy_release.yaml',
-              ref: 'main'
-            })

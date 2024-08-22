@@ -6,10 +6,10 @@ instances: 2
 imageName: ghcr.io/cloudnative-pg/postgresql:15.3
 storage:
   storageClass: ""
-  size: 1Gi
+  size: 5Gi
 walStorage:
   storageClass: ""
-  size: 1Gi
+  size: 5Gi
 
 monitoring: true
 
@@ -18,7 +18,6 @@ clusterAffinity:
     enablePodAntiAffinity: true
     topologyKey: kubernetes.io/hostname
     podAntiAffinityType: preferred
-
 
 # Example for backups: 
 # clusterBackup:
@@ -33,8 +32,6 @@ clusterAffinity:
 #         secretAccessKey:
 #           name: minio-creds
 #           key: MINIO_SECRET_KEY
-
-
 
 clusterSpec:
   bootstrap:
@@ -51,11 +48,7 @@ backup:
   backupOwnerReference: none
   retentionPolicy: 7d
   type: minioLocal
-  azure:
-    storageAccount: ""
-    container: ""
-  s3:
-    endpointURL: ""
-    bucket: ""
-  gcs: 
-    bucket: ""
+  minioLocal:
+    destinationPath: ""
+  linode:
+    destinationPath: ""

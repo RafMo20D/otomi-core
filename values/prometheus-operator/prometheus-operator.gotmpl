@@ -1,7 +1,6 @@
 {{- $v := .Values }}
 {{- $c := $v.apps }}
 {{- $k := $v.apps.keycloak }}
-{{- $t := $v.apps.thanos }}
 {{- $o := $v | get "oidc" dict }}
 {{- $a := $v.apps | get "alertmanager" }}
 {{- $g := $v.apps | get "grafana" }}
@@ -28,6 +27,7 @@ global:
 {{- end }}
 
 defaultRules:
+  create: {{ $p.enabled }}
   disabled:
     {{- range $p.disabledRules }}
     {{ . }}: true
@@ -88,9 +88,6 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          {{- if $v._derived.supportedCloud }}
-          storageClassName: fast
-          {{- end }}
           resources:
             requests:
               storage: {{ $p | get "storageSize" }}
@@ -121,10 +118,6 @@ prometheus:
       {{- end }}
       tlsConfig:
         insecureSkipVerify: {{ $p.remoteWrite.rwConfig.insecureSkipVerify }}
-      {{- if $p.remoteWrite.otomiThanos }}
-      headers:
-        cluster: "{{ $v.cluster.domainSuffix }}"
-      {{- end }}
       {{- with $p | get "remoteWrite.rwConfig.customConfig" nil }}
       {{- . | nindent 6 }}
       {{- end }}
@@ -139,7 +132,7 @@ prometheus:
     {{- range $m := (tpl (readFile "service-monitors.gotmpl") $v | fromYaml) | get "additionalServiceMonitors" }}
     - {{- toYaml $m | nindent 6 }}
     {{- end }}
-{{ if or (not $v.otomi.isMultitenant) (eq $v.cluster.provider "aws") ($v.apps.opencost.alerts.enabled) }}  
+{{ if or (not $v.otomi.isMultitenant) (eq $v.cluster.provider "aws") }}  
 additionalPrometheusRules:
   {{- if not $v.otomi.isMultitenant }}
   - name: blackbox
@@ -148,24 +141,6 @@ additionalPrometheusRules:
   {{- if eq $v.cluster.provider "aws" }}
   - name: cluster-autoscaler
     {{- readFile "rules/cluster-autoscaler.yaml" | nindent 4 }}
-  {{- end }}
-  {{- if $c.thanos.enabled }}
-  - name: thanos
-    {{- readFile "rules/thanos.yaml" | nindent 4 }}
-  {{- end }}
-  {{- if and ($v.apps.opencost.alerts.enabled) }}
-  - name: opencost
-    groups:
-      - name: opencost.rules
-        rules:
-          - alert: CostOfAllNodesQuotaPerMonthReached
-            expr: sum(node_total_hourly_cost) * 730 > {{ $v.apps.opencost.alerts.costOfAllNodesQuotaPerMonthReached.quota }}
-            for: 1d
-            labels:
-              severity: warning
-            annotations:
-              description: The monthly cost of all cluster nodes has reached {{ $v.apps.opencost.alerts.costOfAllNodesQuotaPerMonthReached.quota }}
-              summary: Node cost quota p.m. reached
   {{- end }}
 {{- end }}
 alertmanager:
@@ -238,13 +213,8 @@ grafana:
       enabled: true
       label: release
       labelValue: grafana-dashboards
-    {{- if $t.enabled }}
-      multicluster:
-        global:
-          enabled: true
-    {{- end }}
   serviceMonitor:
-    # namespace: grafana
+    enabled: {{ $p.enabled }}
     labels:
       prometheus: system
 
@@ -254,6 +224,7 @@ grafana:
   plugins:
     - grafana-piechart-panel
   additionalDataSources:
+    {{- if $c.loki.enabled }}
     - name: Loki
       editable: false
       uid: loki
@@ -264,6 +235,7 @@ grafana:
       basicAuthUser: otomi-admin
       secureJsonData:
         basicAuthPassword: {{ $v.apps.loki.adminPassword }}
+
     {{- if $c.tempo.enabled }}
       jsonData:
         derivedFields:
@@ -312,20 +284,6 @@ grafana:
         lokiSearch:
           datasourceUid: 'loki'
     {{- end }}
-    {{- if $v | get "azure.monitor" nil }}
-    - {{- tpl (readFile "../../helmfile.d/snippets/azure-monitor.gotmpl") $v.azure.monitor | toString | nindent 6 }}
-    {{- end }}
-    {{- if $t.enabled }}
-    - name: Thanos Query
-      access: proxy
-      basicAuth: false
-      editable: false
-      orgId: 1
-      type: prometheus
-      url: http://thanos-query-frontend.monitoring:9090
-      jsonData:
-        prometheusType: Thanos
-        timeInterval: "30s"
     {{- end }}
   adminPassword: {{ $g | get "adminPassword" $v.otomi.adminPassword }}
   grafana.ini: {{- $grafanaIni | nindent 4 }}
@@ -334,6 +292,12 @@ grafana:
       # serve_from_sub_path: true
     security:
       allow_embedding: true
+
+kubernetesServiceMonitors:
+  enabled: {{ $p.enabled }}
+
+kubeStateMetrics:
+  enabled: {{ $p.enabled }}
 
 kube-state-metrics:
   prometheus:
@@ -356,6 +320,10 @@ kube-state-metrics:
       cpu: 100m
       memory: 128Mi
     {{- end }}
+
+
+nodeExporter:
+  enabled: {{ $p.enabled }}
 
 prometheus-node-exporter:
   prometheus:

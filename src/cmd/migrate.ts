@@ -4,7 +4,7 @@
 import { diff } from 'deep-diff'
 import { copy, createFileSync, move, pathExists, renameSync, rm } from 'fs-extra'
 import { unlink } from 'fs/promises'
-import { cloneDeep, each, get, set, unset } from 'lodash'
+import { cloneDeep, each, get, pull, set, unset } from 'lodash'
 import { prepareEnvironment } from 'src/common/cli'
 import { decrypt, encrypt } from 'src/common/crypt'
 import { terminal } from 'src/common/debug'
@@ -13,6 +13,7 @@ import { hfValues } from 'src/common/hf'
 import { getFilename, gucci, loadYaml, rootDir } from 'src/common/utils'
 import { writeValues, writeValuesToFile } from 'src/common/values'
 import { BasicArguments, getParsedArgs, setParsedArgs } from 'src/common/yargs'
+import { v4 as uuidv4 } from 'uuid'
 import { Argv } from 'yargs'
 import { cd } from 'zx'
 
@@ -24,6 +25,10 @@ interface Arguments extends BasicArguments {
 
 interface Change {
   version: number
+  clones?: Array<{
+    [targetPath: string]: string
+  }>
+  fileDeletions?: Array<string>
   deletions?: Array<string>
   relocations?: Array<{
     [oldLocation: string]: string
@@ -38,9 +43,29 @@ interface Change {
     [mutation: string]: string
   }>
   fileAdditions?: Array<string>
+  bulkAdditions?: Array<{
+    [mutation: string]: string
+  }>
+  networkPoliciesMigration?: boolean
 }
 
 export type Changes = Array<Change>
+
+export const deleteFile = async (
+  relativeFilePath: string,
+  dryRun = false,
+  deps = { pathExists, renameSync, terminal, copy, rm },
+): Promise<void> => {
+  const d = deps.terminal(`cmd:${cmdName}:rename`)
+  const path = `${env.ENV_DIR}/${relativeFilePath}`
+  if (!(await deps.pathExists(path))) {
+    d.warn(`File does not exist: "${path}". Already removed?`)
+    return
+  }
+  if (!dryRun) {
+    await deps.rm(path)
+  }
+}
 
 export const rename = async (
   oldName: string,
@@ -88,8 +113,32 @@ export const rename = async (
 }
 
 const moveGivenJsonPath = (values: Record<string, any>, lhs: string, rhs: string): void => {
-  const val = get(values, lhs)
-  if (val !== undefined && set(values, rhs, val)) unset(values, lhs)
+  const lhsPaths = unparsePaths(lhs, values)
+  const rhsPaths = unparsePaths(rhs, values)
+
+  lhsPaths.forEach((lhsPath, index) => {
+    const pathParts = lhsPath.split('.')
+    const item = pathParts.pop()
+    const path = pathParts.join('.')
+    const prev = get(values, path)
+    const val = get(values, lhsPath)
+
+    if (!val && Array.isArray(prev) && prev.includes(item)) {
+      set(values, lhsPath, pull(prev, item))
+      const next = get(values, rhsPaths[index])
+      if (next && !next.includes(item)) {
+        next.push(item)
+        set(values, rhsPaths[index], next)
+      } else {
+        set(values, rhsPaths[index], [item])
+      }
+      return
+    }
+
+    if (val && set(values, rhsPaths[index], val)) {
+      unset(values, lhsPath)
+    }
+  })
 }
 
 export function filterChanges(version: number, changes: Changes): Changes {
@@ -156,6 +205,103 @@ export const setDeep = async (obj: Record<string, any>, path: string, tmplStr: s
   )
 }
 
+const transformIngressPolicy = (service: any, networkPolicy: any, netpols: any[]) => {
+  if (!networkPolicy.ingressPrivate) return
+  const ingress = {
+    ...networkPolicy.ingressPrivate,
+    toLabelName: 'otomi.io/app',
+    toLabelValue: service.name,
+  }
+  if (ingress?.allow?.length > 0) {
+    ingress.allow = ingress.allow.map((a: any) => transformAllow(a))
+  }
+  netpols.push({
+    id: uuidv4(),
+    ...(service.name && { name: service.name }),
+    ruleType: {
+      type: 'ingress',
+      ingress,
+    },
+  })
+}
+
+const transformAllow = (a: any) => {
+  const allow = { ...a }
+  if (allow.team) {
+    allow.fromNamespace = `team-${allow.team}`
+    unset(allow, 'team')
+  }
+  if (allow.service) {
+    allow.fromLabelName = 'otomi.io/app'
+    allow.fromLabelValue = allow.service
+    unset(allow, 'service')
+  }
+  return allow
+}
+
+const transformEgressPolicy = (service: any, netpols: any[]) => {
+  if (!service.networkPolicy.egressPublic) return
+  const egress = [...service.networkPolicy.egressPublic]
+  egress.forEach((e: any) => {
+    netpols.push({
+      id: uuidv4(),
+      ...(e.domain && { name: e.domain.replaceAll('.', '-').replaceAll(':', '-') }),
+      ruleType: {
+        type: 'egress',
+        egress: e,
+      },
+    })
+  })
+}
+
+const networkPoliciesMigration = async (values: Record<string, any>): Promise<void> => {
+  const teams: Array<string> = Object.keys(values?.teamConfig as Record<string, any>)
+  await Promise.all(
+    teams.map(async (teamName) => {
+      const servicePermissions = get(values, `teamConfig.${teamName}.selfService.service`, [])
+      if (servicePermissions.includes('networkPolicy'))
+        set(
+          values,
+          `teamConfig.${teamName}.selfService.service`,
+          servicePermissions.filter((s: any) => s !== 'networkPolicy'),
+        )
+
+      createFileSync(`${env.ENV_DIR}/env/teams/netpols.${teamName}.yaml`)
+      let services = get(values, `teamConfig.${teamName}.services`)
+      if (!services || services.length === 0) return
+      const valuesToWrite = {
+        teamConfig: {},
+      }
+      const netpols: any = []
+
+      services
+        .filter((s) => s?.networkPolicy && s?.networkPolicy?.ingressPrivate?.mode !== 'DenyAll')
+        .forEach((service: any) => {
+          const { networkPolicy } = service
+          transformIngressPolicy(service, networkPolicy, netpols)
+          transformEgressPolicy(service, netpols)
+        })
+
+      valuesToWrite.teamConfig[teamName] = { netpols }
+      await writeValuesToFile(`${env.ENV_DIR}/env/teams/netpols.${teamName}.yaml`, valuesToWrite, true)
+      set(values, `teamConfig.${teamName}.netpols`, netpols)
+      services = services.map((service: any) => {
+        if (service.networkPolicy) {
+          unset(service, 'networkPolicy')
+        }
+        return service
+      })
+      set(values, `teamConfig.${teamName}.services`, services)
+    }),
+  )
+}
+
+const bulkAddition = (path: string, values: any, filePath: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const val = require(filePath)
+  setAtPath(path, values, val)
+}
+
 /**
  * Applies changes from configuration.
  *
@@ -184,8 +330,9 @@ export const applyChanges = async (
   const prevValues = (await deps.hfValues({ filesOnly: true })) as Record<string, any>
   const values = cloneDeep(prevValues)
   for (const c of changes) {
-    c.deletions?.forEach((entry) => unset(values, entry) && unset(values, entry))
-    c.additions?.forEach((entry) => each(entry, (val, path) => set(values, path, val)))
+    c.deletions?.forEach((entry) => unsetAtPath(entry, values))
+    c.additions?.forEach((entry: any) => each(entry, (val, path) => setAtPath(path, values, val)))
+    c.bulkAdditions?.forEach((entry) => each(entry, (filePath, path) => bulkAddition(path, values, filePath)))
     c.relocations?.forEach((entry) => each(entry, (newName, oldName) => moveGivenJsonPath(values, oldName, newName)))
     if (c.mutations)
       // 'for const of' is used here to allow await in loop
@@ -202,6 +349,15 @@ export const applyChanges = async (
           await setDeep(values, path, tmplStr)
         }
       }
+    // Lastly we remove files
+    for (const change of changes) {
+      change.fileDeletions?.forEach((entry) => {
+        const paths = unparsePaths(entry, values)
+        paths.forEach((path) => deleteFile(path))
+      })
+    }
+
+    if (c.networkPoliciesMigration) await networkPoliciesMigration(values)
 
     Object.assign(values, { version: c.version })
   }
@@ -210,6 +366,25 @@ export const applyChanges = async (
   return diff(prevValues, values)
 }
 
+export const unparsePaths = (path: string, values: Record<string, any>): Array<string> => {
+  if (path.includes('{team}')) {
+    const paths: Array<string> = []
+    const teams: Array<string> = Object.keys(values?.teamConfig as Record<string, any>)
+    teams.forEach((teamName) => paths.push(path.replace('{team}', teamName)))
+    return paths.sort()
+  } else {
+    return [path]
+  }
+}
+export const unsetAtPath = (path: string, values: Record<string, any>): void => {
+  const paths = unparsePaths(path, values)
+  paths.forEach((p) => unset(values, p))
+}
+
+export const setAtPath = (path: string, values: Record<string, any>, value: string): void => {
+  const paths = unparsePaths(path, values)
+  paths.forEach((p) => set(values, p, Array.isArray(value) ? [...value] : value))
+}
 export const preserveIngressControllerConfig = async (
   dryRun = false,
   deps = {
@@ -250,7 +425,6 @@ export const preserveIngressControllerConfig = async (
 
   return true
 }
-
 /**
  * Differences are reported as one or more change records. Change records have the following structure:
 

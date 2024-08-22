@@ -10,13 +10,14 @@ Effective development starts with an understanding the code structure and the re
 - [Working with the team-ns chart](#working-with-the-team-ns-chart)
 - [Testing](#testing)
 - [Otomi CLI](#otomi-cli)
+- [Troubleshooting](#troubleshooting)
 
 # Navigating through code
 
 ## Project structure
 
 ```
-otomi-core
+apl-core
 ├── .values                     # Boilerplate for initializing git repository
 ├── adr                         # Architectural Decision Records [read more](https://adr.github.io/madr/)
 ├── bin                         # Otomi CLI entrypoint (deprecated)
@@ -43,7 +44,7 @@ otomi-core
 It is important that you get familiar with reusable code snippets located at `helmfile.d/snippets`. Below, I describe the most essential ones:
 
 ```
-otomi-core/helmfile.d/snippets
+apl-core/helmfile.d/snippets
 ├── defaults.yaml             # static defaults that can be overwritten by user values and/or derived values
 ├── derived.gotmpl            # values derived from default and user values
 ├── env.gotmpl                # define helmfile environment settings
@@ -140,7 +141,7 @@ In the [Code structure](#Code-structure) chapter, you have learned about reusabl
 
 > We present `myapp` integration. The `myapp` is an arbitrary name and can be anything else.
 
-> A core apps are those defined in otomi-core. Do not confuse them with team services, which are defined in the values repo.
+> A core apps are those defined in apl-core. Do not confuse them with team services, which are defined in the values repo.
 
 ## Using the default code snippet
 
@@ -315,14 +316,20 @@ TBD
 
 ## Using CLI while developing templates
 
-Using Otomi CLI can be very helpful while integrating apps or developing new features that involve the execution of Helmfile because it allows you to render and validate manifests. It is possible to use Otomi CLI in development mode, so the Otomi CLI reflects changes made in your local `otomi-core` directory.
+Using Otomi CLI can be very helpful while integrating apps or developing new features that involve the execution of Helmfile because it allows you to render and validate manifests. It is possible to use Otomi CLI in development mode, so the Otomi CLI reflects changes made in your local `apl-core` directory.
 
 To run Otomi CLI in the development mode, you must:
 
-- execute Otomi CLI commands from a root directory of the `otomi-core` project
+- execute Otomi CLI commands from a root directory of the `apl-core` project
 - export `ENV_DIR`
 
 First, run `npm install` to build all modules required for CLI.
+
+Then, install other dependencies
+
+```
+npm run install-deps
+```
 
 To create a values repository, follow the below steps:
 
@@ -397,3 +404,21 @@ otomi validate-templates -l name=myapp
 otomi x helmfile -l name=myapp write-values
 
 ```
+
+# Troubleshooting
+
+Some cloud providers are suing custom plugins to refresh the token. Since Otomi CLI executes by default in container some plugins may not be available. In order to solve this issue you can instruct Otomi CLI to execute directly on your host.
+
+First ensure that you have all required binaries
+
+```
+npm run install-deps
+```
+
+Then instruct Otomi to not run in docker:
+
+```
+export IN_DOCKER=false
+```
+
+Next you can execute `otomi apply` or `otomi status` against your to connect with your kubernetes cluster.

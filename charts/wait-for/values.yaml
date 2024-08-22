@@ -13,8 +13,13 @@ host: ''
 # optional pull secrets to use:
 imagePullSecrets: []
 
-# otomi/tasks image to use, defaults to the one from .versions file
+# linode/apl-tasks image to use, defaults to the one from .versions file
 # tasksVersion: master
 
 serviceAccount:
   create: true
+# podDnsPolicy: "None"
+# podDnsConfig:
+#   nameservers:
+#     - "1.1.1.1"
+#     - "8.8.8.8"

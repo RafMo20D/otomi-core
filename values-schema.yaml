@@ -212,47 +212,6 @@ definitions:
           - AzureChinaCloud
           - AzureUSGovernment
           - AzureGermanCloud
-      monitor:
-        additionalProperties: false
-        properties:
-          appInsightsApiKey:
-            $ref: '#/definitions/azure/definitions/clientSecret'
-            title: AppInsights api key
-            description: An Azure AppInsights client secret.
-          appInsightsAppId:
-            $ref: '#/definitions/azure/definitions/clientId'
-            title: AppInsights app id
-          azureLogAnalyticsSameAs:
-            title: LogAnalytics using same creds?
-            type: boolean
-            default: true
-          clientId:
-            $ref: '#/definitions/azure/definitions/clientId'
-          clientSecret:
-            $ref: '#/definitions/azure/definitions/clientSecret'
-          logAnalyticsClientId:
-            $ref: '#/definitions/azure/definitions/clientId'
-            title: LogAnalytics client id
-            description: An Azure client secret.
-          logAnalyticsClientSecret:
-            $ref: '#/definitions/azure/definitions/clientSecret'
-            title: LogAnalytics client secret
-            description: An Azure client secret.
-          logAnalyticsTenantId:
-            $ref: '#/definitions/azure/definitions/tenantId'
-            title: LogAnalytics tenant id
-            description: An Azure tenant id.
-          logAnalyticsDefaultWorkspace:
-            title: LogAnalytics default workspace to show
-            description: An Azure LogAnalytics workspace.
-            type: string
-          subscriptionId:
-            $ref: '#/definitions/azure/definitions/subscriptionId'
-          tenantId:
-            $ref: '#/definitions/azure/definitions/tenantId'
-        required:
-          - clientId
-          - clientSecret
       tenantId:
         title: Azure tenant id
         description: An Azure tenant id.
@@ -268,11 +227,6 @@ definitions:
   cluster:
     additionalProperties: false
     properties:
-      apiName:
-        description:
-          Exact name of cluster as created when on AWS. Optional otherwise and will be generated for UI purposes.
-          When on AWS this name is used for chart cluster-autoscaler and aws-alb-ingress-controller (enabled if otomi.hasExternalLB).
-        $ref: '#/definitions/wordCharacterPattern'
       apiServer:
         description: Used to generate KUBECONFIG for download, for local access to target cluster.
         pattern: '^https:\/\/.*'
@@ -291,25 +245,9 @@ definitions:
         default: otomi
       provider:
         $ref: '#/definitions/provider'
-      region:
-        description: 'An AWS region. Only required for AWS.'
-        examples:
-          - eu-central-1
     required:
       - name
       - provider
-    allOf:
-      - oneOf:
-          - properties:
-              provider:
-                enum: [aws]
-            required:
-              - apiName
-              - region
-          - not:
-              properties:
-                provider:
-                  enum: [aws]
   clusterName:
     $ref: '#/definitions/wordCharacterPattern'
     type: string
@@ -354,7 +292,7 @@ definitions:
     type: string
   backup:
     type: object
-    description: Team backups
+    description: PV backups
     properties:
       name:
         $ref: '#/definitions/wordCharacterPattern'
@@ -525,17 +463,11 @@ definitions:
         title: Load balancer IP address
         description: A static IP address assigned to a load balancer
         type: string
-      loadBalancerRG:
-        title: Load balancer Azure resource group
-        type: string
-      loadBalancerSubnet:
-        title: Load balancer Azure subnet
-        type: string
-        description: Specify subnet provider for load balancer IP address (applies to private network only)
       sourceIpAddressFiltering:
         title: Source IP address filtering
         type: string
         description: 'Whitelist source IP address ranges. The value is a comma separated list of CIDRs, e.g. 10.0.0.0/24,172.10.0.1'
+
   ipV4Address:
     type: string
     pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
@@ -643,64 +575,56 @@ definitions:
     nullable: true
     type: object
     title: Kubernetes secrets
-  networkPolicy:
-    additionalProperties: false
+  netpol:
+    type: object
     properties:
-      podSelector:
+      name:
         type: string
-        title: Internal ingress filtering
-        description: 'Pods belonging to this service must contain "otomi.io/app: <service name>" label'
-      ingressPrivate:
-        oneOf:
-          - title: Deny all
-            description: Deny traffic from all teams (including this one)
+        title: Network Policy name
+        description: 'A unique name for the network policy'
+      ruleType:
+        properties:
+          ingress:
             properties:
-              mode:
-                default: DenyAll
-                enum:
-                  - DenyAll
-          - title: Allow selected
-            properties:
+              toLabelName:
+                type: string
+                title: Selector label name
+                description: 'The name of the Pod selector label'
+              toLabelValue:
+                type: string
+                title: Selector label value
+                description: 'The value of the Pod selector label'
               mode:
                 default: AllowOnly
                 enum:
                   - AllowOnly
+                  - AllowAll
               allow:
                 title: Add team or team with service
                 type: array
                 items:
                   type: object
                   properties:
-                    team:
-                      title: FROM team name
-                      description: Allow traffic from a given team
+                    fromLabelName:
                       type: string
-                    service:
-                      title: FROM label value
-                      description: 'Allow traffic from pods with label "otomi.io/app: <value>"'
+                      title: Selector label name
+                      description: 'The name of the Pod selector label'
+                    fromLabelValue:
                       type: string
+                      title: Selector label value
+                      description: 'The value of the Pod selector label'
+                    fromNamespace:
+                      type: string
+                      title: Namespace name
+                      description: 'The name of the namespace'
                   required:
-                    - team
-          - title: Allow all
-            description: Allow traffic from all teams
+                    - fromNamespace
+          egress:
             properties:
-              mode:
-                default: AllowAll
-                enum:
-                  - AllowAll
-      egressPublic:
-        title: External egress filtering
-        description: Trusted domains this service can access
-        type: array
-        items:
-          type: object
-          properties:
-            host:
-              title: FQDN or IP address
-              $ref: '#/definitions/domain'
-            ports:
-              type: array
-              items:
+              domain:
+                title: FQDN or IP address
+                $ref: '#/definitions/domain'
+              ports:
                 properties:
                   number:
                     title: Port number
@@ -715,13 +639,11 @@ definitions:
                 required:
                   - number
                   - protocol
-                minItems: 1
-                uniqueItems: true
-              default:
-                - number: 443
-                  protocol: HTTPS
-          required:
-            - domain
+                default:
+                  - number: 443
+                    protocol: HTTPS
+            required:
+              - domain
   path:
     description: An absolute path
     type: string
@@ -761,18 +683,11 @@ definitions:
     type: integer
   provider:
     type: string
-    description: Enter the cloud provider of this cluster. Choose 'custom' for laptop install (minikube, kind) or onprem installs.
+    description: Enter the cloud provider of the cluster.
     enum:
-      - aws
-      - azure
-      - digitalocean
-      - google
       - custom
-      - kind
-      - ovh
-      - vultr
-      - scaleway
-      - civo
+      - linode
+    default: linode
   redisChart:
     properties:
       _rawValues:
@@ -840,20 +755,6 @@ definitions:
       - limits
       - requests
     title: Pod resources
-  shortcuts:
-    type: array
-    items:
-      additionalProperties: false
-      properties:
-        title:
-          type: string
-          description: Title for the shortcut
-        description:
-          type: string
-          description: A short description about the target of this shortcut.
-        path:
-          $ref: '#/definitions/path'
-      type: object
   unixOwnerIdRange:
     type: object
     additionalProperties: false
@@ -1006,11 +907,6 @@ definitions:
             type: boolean
           workload:
             $ref: '#/definitions/labelsAnnotations'
-      certArn:
-        description: Only available on AWS when an external LB is configured. The cert ARN will be registered on the load balancer for SSL termination.
-        example: arn:aws:acm:eu-central-1:xxx:certificate/xxx
-        pattern: 'arn:aws(-cn|-us-gov)?:acm:\S+:\d+:\w+\/\S+'
-        type: string
       trafficControl:
         title: Traffic Control
         description: Split traffic between multiple services (blue/green, canary)
@@ -1104,8 +1000,6 @@ definitions:
       namespace:
         $ref: '#/definitions/idName'
         description: A kubernetes namespace. Only used by core services, so should be disallowed for non-admins.
-      networkPolicy:
-        $ref: '#/definitions/networkPolicy'
       ownHost:
         default: true
         description: When true the service will get it's own domain by prefixing the app name to the team domain. Mostly set to true. This will probably be removed soon.
@@ -1183,11 +1077,6 @@ definitions:
         $ref: '#/definitions/alerts'
       apps:
         type: object
-        properties:
-          shortcuts:
-            $ref: '#/definitions/shortcuts'
-      azureMonitor:
-        $ref: '#/definitions/azure/definitions/monitor'
       backups:
         type: array
         items:
@@ -1199,8 +1088,6 @@ definitions:
       id:
         $ref: '#/definitions/idName'
         description: Must be the same as the name.
-      jobs:
-        $ref: '#/definitions/jobs'
       limitRange:
         description: 'Kubernetes limit range. As is.'
         properties:
@@ -1221,24 +1108,15 @@ definitions:
       resourceQuota:
         description: 'List of kubernetes resource quota. Should adhere to the "spec.hard" format as described here: https://kubernetes.io/docs/concepts/policy/resource-quotas/. Not validated as there is no schema published. Change at your own risk.'
         type: object
-      billingAlertQuotas:
-        title: Billing alert quotas
-        properties:
-          teamCpuMonthQuotaReached:
-            properties:
-              quota:
-                type: integer
-                default: 100
-          teamMemMonthQuotaReached:
-            properties:
-              quota:
-                type: integer
-                default: 100
       selfService:
         $ref: '#/definitions/teamSelfService'
       services:
         items:
           $ref: '#/definitions/service'
+        type: array
+      netpols:
+        items:
+          $ref: '#/definitions/netpol'
         type: array
       managedMonitoring:
         title: Managed monitoring
@@ -1251,6 +1129,9 @@ definitions:
             type: boolean
             default: false
           alertmanager:
+            type: boolean
+            default: false
+          private:
             type: boolean
             default: false
       networkPolicy:
@@ -1272,42 +1153,48 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/project'
+      policies:
+        type: object
       builds:
         type: array
         items:
           $ref: '#/definitions/build'
+      sealedsecrets:
+        type: array
+        items:
+          $ref: '#/definitions/sealedsecret'
   teamSelfService:
-    title: Team self service flags
+    title: Team permissions
     description: Grant team permissions to modify certain configuration parameters.
     type: object
     properties:
       service:
+        title: Service
         type: array
         items:
           type: string
-          enum: [ingress, networkPolicy]
+          enum: [ingress]
         uniqueItems: true
       team:
+        title: Team settings
         type: array
         items:
           type: string
-          enum:
-            [
-              alerts,
-              backup,
-              billingAlertQuotas,
-              oidc,
-              resourceQuota,
-              downloadKubeConfig,
-              downloadDockerConfig,
-              networkPolicy,
-            ]
+          enum: [oidc, managedMonitoring, alerts, resourceQuota, networkPolicy]
         uniqueItems: true
       apps:
+        title: Apps
         type: array
         items:
           type: string
           enum: [argocd, gitea]
+        uniqueItems: true
+      access:
+        title: Access
+        type: array
+        items:
+          type: string
+          enum: [shell, downloadKubeConfig, downloadDockerConfig, downloadCertificateAuthority]
         uniqueItems: true
   backupTtl:
     default: 168h
@@ -1347,6 +1234,8 @@ definitions:
         $ref: '#/definitions/wordCharacterPattern'
     required:
       - name
+  policies:
+    type: object
   build:
     type: object
     description: Define location of code to build
@@ -1364,6 +1253,10 @@ definitions:
         type: boolean
         description: Select when using an external private Git repository.
         default: false
+      scanSource:
+        type: boolean
+        default: true
+        description: Select to scan source
       secretName:
         description: The name of the secret with the credentials of the external private Git repository
         type: string
@@ -1382,6 +1275,18 @@ definitions:
                 description: A relative directory path within the Git repository.
                 type: string
                 default: ./Dockerfile
+              envVars:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: string
+                  required:
+                    - name
+                    - value
           buildpacks:
             properties:
               repoUrl:
@@ -1394,7 +1299,53 @@ definitions:
               path:
                 description: A relative directory path within the Git repository.
                 type: string
+              envVars:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: string
+                  required:
+                    - name
+                    - value
     required:
+      - name
+
+  sealedsecret:
+    type: object
+    description: Define location of code to build
+    properties:
+      name:
+        type: string
+      namespace:
+        type: string
+      immutable:
+        description: 'Immutable, if set to true, ensures that data stored in the Secret cannot be updated (only object metadata can be modified).'
+        type: boolean
+      type:
+        description: Used to facilitate programmatic handling of secret data.
+        type: string
+        default: kubernetes.io/opaque
+        enum:
+          [
+            'kubernetes.io/opaque',
+            'kubernetes.io/service-account-token',
+            'kubernetes.io/dockercfg',
+            'kubernetes.io/dockerconfigjson',
+            'kubernetes.io/basic-auth',
+            'kubernetes.io/ssh-auth',
+            'kubernetes.io/tls',
+          ]
+      encryptedData:
+        type: object
+      metadata:
+        type: object
+    required:
+      - type
+      - encryptedData
       - name
 
   workload:
@@ -1490,114 +1441,6 @@ definitions:
     required:
       - name
       - url
-  storageProvider:
-    type: object
-    title: Storage provider
-    description: Select the preferred provider for storing database backups.
-    oneOf:
-      - title: Local Minio
-        type: object
-        description: Select to use the in-cluster Minio instance.
-        properties:
-          type:
-            type: string
-            enum:
-              - minioLocal
-            default: minioLocal
-      - title: Azure Blob
-        type: object
-        x-hideTitle: true
-        properties:
-          azure:
-            type: object
-            description: Select to store in Azure Blob storage.
-            title: Azure blob (container) storage
-            properties:
-              accountKey:
-                type: string
-                x-secret: ''
-              accountName:
-                type: string
-              containerName:
-                type: string
-            required:
-              - accountKey
-              - accountName
-              - containerName
-          type:
-            type: string
-            enum:
-              - azure
-            default: azure
-        required:
-          - azure
-          - type
-      - title: S3
-        type: object
-        x-hideTitle: true
-        properties:
-          s3:
-            type: object
-            title: S3
-            description: Select to store in AWS S3 or S3 compatible blob storage.
-            properties:
-              bucket:
-                type: string
-                description: The name of the bucket.
-                $ref: '#/definitions/wordCharacterPattern'
-              s3Url:
-                type: string
-                description: The full S3 URL.
-                $ref: '#/definitions/wordCharacterPattern'
-              accessKeyId:
-                type: string
-                description: The ID of the access key. Optional if cloud provider is AWS.
-                $ref: '#/definitions/wordCharacterPattern'
-              secretAccessKey:
-                type: string
-                description: The secret of the access key. Optional if cloud provider is AWS.
-                $ref: '#/definitions/wordCharacterPattern'
-                x-secret: ''
-            required:
-              - bucket
-              - s3Url
-              - accessKeyId
-              - secretAccessKey
-          type:
-            type: string
-            enum:
-              - s3
-            default: s3
-        required:
-          - s3
-          - type
-      - title: gcs
-        type: object
-        x-hideTitle: true
-        properties:
-          gcs:
-            type: object
-            title: Google Cloud Storage
-            description: Select to store backups in Google Cloud Storage.
-            properties:
-              bucket:
-                type: string
-                description: Name of the bucket.
-                $ref: '#/definitions/wordCharacterPattern'
-              serviceAccountKey:
-                $ref: '#/definitions/google/definitions/accountJson'
-                description: A service account key in json format for authentication.
-            required:
-              - bucket
-              - serviceAccountKey
-          type:
-            type: string
-            enum:
-              - gcs
-            default: gcs
-        required:
-          - gcs
-          - type
 
 properties:
   alerts:
@@ -1617,25 +1460,6 @@ properties:
             default: false
             description: Indicates Azure Application Gateway Ingress Controller add-on is installed by AKS.
             type: boolean
-      monitor:
-        $ref: '#/definitions/azure/definitions/monitor'
-
-  cloud:
-    additionalProperties: true
-    properties:
-      skipStorageClasses:
-        description: |
-          List of storage classes to exclude from deployment, to avoid k8s errors due to patching not allowed.
-          This is a rather hacky way to circumvent the patching problem, going against idempotency, but we need it.
-          Without it we can't add new storageclasses to a cluster upgrading otomi.
-        type: array
-        items:
-          type: string
-          enum:
-            - std
-            - std-immediate
-            - fast
-            - fast-immediate
   apps:
     additionalProperties: true
     properties:
@@ -1659,8 +1483,19 @@ properties:
           enabled:
             type: boolean
             default: true
+          applicationSet:
+            replicas:
+              default: 1
+              type: integer
+          controller:
+            replicas:
+              default: 1
+              type: integer
           autoscaling:
-            $ref: '#/definitions/autoscalingEnabled'
+            repoServer:
+              $ref: '#/definitions/autoscalingEnabled'
+            server:
+              $ref: '#/definitions/autoscalingEnabled'
           resources:
             additionalProperties: false
             properties:
@@ -1671,6 +1506,12 @@ properties:
               repo:
                 $ref: '#/definitions/resources'
               redis:
+                $ref: '#/definitions/resources'
+              applicationSet:
+                $ref: '#/definitions/resources'
+              notifications:
+                $ref: '#/definitions/resources'
+              imageUpdater:
                 $ref: '#/definitions/resources'
       cert-manager:
         additionalProperties: false
@@ -1721,26 +1562,6 @@ properties:
             $ref: '#/definitions/rawValues'
           resources:
             $ref: '#/definitions/resources'
-          storage:
-            $ref: '#/definitions/storageProvider'
-      cluster-autoscaler:
-        additionalProperties: false
-        properties:
-          _rawValues:
-            $ref: '#/definitions/rawValues'
-          enabled:
-            type: boolean
-      cluster-overprovisioner:
-        additionalProperties: false
-        properties:
-          _rawValues:
-            $ref: '#/definitions/rawValues'
-          enabled:
-            type: boolean
-          cpu:
-            $ref: '#/definitions/cpuQuantity'
-          memory:
-            $ref: '#/definitions/memoryQuantity'
       drone:
         additionalProperties: false
         properties:
@@ -1909,65 +1730,6 @@ properties:
                 $ref: '#/definitions/resources'
               falcoExporter:
                 $ref: '#/definitions/resources'
-      gatekeeper:
-        additionalProperties: false
-        properties:
-          _rawValues:
-            $ref: '#/definitions/rawValues'
-          enabled:
-            type: boolean
-            default: false
-          auditInterval:
-            type: integer
-            default: 60
-          auditFromCache:
-            type: boolean
-            default: false
-          constraintViolationsLimit:
-            type: integer
-            default: 20
-          dataSync:
-            type: array
-            items:
-              type: object
-              properties:
-                group:
-                  description: A k8s resource api group.
-                  type: string
-                kind:
-                  description: A k8s resource kind.
-                  type: string
-                version:
-                  description: A k8s resource version.
-                  type: string
-              required: [kind, version]
-          disableValidatingWebhook:
-            type: boolean
-            default: true
-          excludedNamespaces:
-            type: array
-            items:
-              type: string
-          emitAuditEvents:
-            type: boolean
-            default: false
-          emitAdmissionEvents:
-            type: boolean
-            default: false
-          logLevel:
-            type: string
-            default: 'INFO'
-          replicas:
-            type: integer
-          image:
-            $ref: '#/definitions/imageSimple'
-          resources:
-            additionalProperties: false
-            properties:
-              audit:
-                $ref: '#/definitions/resources'
-              controller:
-                $ref: '#/definitions/resources'
       gitea:
         properties:
           _rawValues:
@@ -2030,10 +1792,10 @@ properties:
           adminPassword:
             type: string
             x-secret: ''
-          databasePassword:
+          oidcAutoOnboard:
+            type: boolean
+          oidcUserClaim:
             type: string
-            description: Once set and deployed it cannot be changed with manual intervention.
-            x-secret: '{{ randAlphaNum 20 }}'
           core:
             properties:
               secret:
@@ -2047,74 +1809,6 @@ properties:
               secret:
                 type: string
                 x-secret: '{{ randAlphaNum 16 }}'
-          persistence:
-            additionalProperties: false
-            properties:
-              imageChartStorage:
-                additionalProperties: false
-                description: For reference go to https://github.com/distribution/distribution/blob/main/docs/configuration.md#storage
-                properties:
-                  s3:
-                    additionalProperties: false
-                    properties:
-                      accesskey:
-                        $ref: '#/definitions/aws/definitions/accessKey'
-                      secretkey:
-                        $ref: '#/definitions/aws/definitions/secretKey'
-                      region:
-                        $ref: '#/definitions/aws/definitions/region'
-                      regionendpoint:
-                        type: string
-                      bucket:
-                        type: string
-                      encrypt:
-                        type: boolean
-                      keyid:
-                        type: string
-                      secure:
-                        type: boolean
-                      v4auth:
-                        type: boolean
-                      chunksize:
-                        type: integer
-                      multipartcopychunksize:
-                        type: integer
-                      multipartcopymaxconcurrency:
-                        type: integer
-                      multipartcopythresholdsize:
-                        type: integer
-                      rootdirectory:
-                        type: string
-                  azure:
-                    additionalProperties: false
-                    properties:
-                      accountname:
-                        type: string
-                      accountkey:
-                        type: string
-                        x-secret: ''
-                      container:
-                        type: string
-                      realm:
-                        type: string
-                  gcs:
-                    additionalProperties: false
-                    properties:
-                      bucket:
-                        type: string
-                      encodedkey:
-                        type: string
-                        x-secret: ''
-                      rootdirectory:
-                        type: string
-                  type:
-                    type: string
-                    enum:
-                      - s3
-                      - azure
-                      - gcs
-                      - filesystem
-                    default: filesystem
           registry:
             properties:
               secret:
@@ -2134,23 +1828,6 @@ properties:
             required:
               - secret
               - credentials
-          database:
-            properties:
-              size:
-                type: string
-              type:
-                type: string
-                description: Internal is a database provided by the community chart. The external is database provided by the cloudnative-pg.
-                enum:
-                  - internal
-                  - external
-              name:
-                type: string
-              user:
-                type: string
-              importHarborDb:
-                description: Indicate if an existing database should be importend. (Once set to true you must not change it back)
-                type: boolean
           image:
             $ref: '#/definitions/imageSimple'
           resources:
@@ -2159,8 +1836,6 @@ properties:
               chartmuseum:
                 $ref: '#/definitions/resources'
               core:
-                $ref: '#/definitions/resources'
-              database:
                 $ref: '#/definitions/resources'
               jobservice:
                 $ref: '#/definitions/resources'
@@ -2177,71 +1852,14 @@ properties:
           secretKey:
             type: string
             x-secret: '{{ randAlpha 16 }}'
-        required:
-          - databasePassword
       httpbin:
         description: The famous httpbin application.
         properties:
           enabled:
             type: boolean
             default: false
-      ingress-azure:
-        additionalProperties: false
-        description: A chart for Azure Application Gateway.
-        properties:
           _rawValues:
             $ref: '#/definitions/rawValues'
-          appgw:
-            additionalProperties: false
-            description: Application Gateway.
-            properties:
-              name:
-                description: A name of the Application Gateway.
-                type: string
-              resourceGroup:
-                description: A name of the Azure Resource Group in which Application Gateway was created.
-                type: string
-              subnetName:
-                description: A subnet of the application gateway.
-                type: string
-              subnetPrefix:
-                description: A subnet in CIDR notation.
-                examples:
-                  - 10.1.0.0/16
-                type: string
-              subscriptionId:
-                description: The Azure Subscription ID in which Application Gateway resides.
-                $ref: '#/definitions/wordCharacterPattern'
-              usePrivateIP:
-                default: false
-                description: Whether a private ip range or not.
-                type: boolean
-            required:
-              - subscriptionId
-              - resourceGroup
-              - name
-              - subnetName
-              - subnetPrefix
-          armAuth:
-            additionalProperties: false
-            description: A service Principal secret.
-            properties:
-              secretJSON:
-                description: A service Principal secret JSON key (base64 encoded).
-                type: string
-            required:
-              - secretJSON
-        allOf:
-          - anyOf:
-              - not:
-                  properties:
-                    enabled:
-                      const: true
-                  required:
-                    - enabled
-              - required:
-                  - armAuth
-                  - appgw
       ingress-nginx-platform:
         $ref: '#/definitions/ingressNginx'
       istio:
@@ -2334,6 +1952,8 @@ properties:
           adminPassword:
             type: string
             x-secret: ''
+          adminUsername:
+            type: string
           theme:
             type: string
             default: otomi
@@ -2350,6 +1970,30 @@ properties:
                 $ref: '#/definitions/resources'
               operator:
                 $ref: '#/definitions/resources'
+      kyverno:
+        additionalProperties: false
+        properties:
+          enabled:
+            type: boolean
+            default: false
+          _rawValues:
+            $ref: '#/definitions/rawValues'
+          mode:
+            type: string
+            enum: ['DevTest', 'Prod']
+            default: DevTest
+          resources:
+            additionalProperties: false
+            properties:
+              admissionController:
+                $ref: '#/definitions/resources'
+              cleanupController:
+                $ref: '#/definitions/resources'
+              backgroundController:
+                $ref: '#/definitions/resources'
+              reportsController:
+                $ref: '#/definitions/resources'
+
       kiali:
         additionalProperties: false
         properties:
@@ -2368,6 +2012,8 @@ properties:
       knative:
         additionalProperties: false
         properties:
+          _rawValues:
+            $ref: '#/definitions/rawValues'
           enabled:
             type: boolean
             default: true
@@ -2379,22 +2025,6 @@ properties:
                 default: 1
                 type: integer
                 minimum: 1
-      external-secrets:
-        additionalProperties: false
-        properties:
-          enabled:
-            type: boolean
-          logLevel:
-            $ref: '#/definitions/logLevel'
-      kube-descheduler:
-        additionalProperties: false
-        properties:
-          enabled:
-            default: true
-            type: boolean
-          schedule:
-            default: '*/30 * * * *'
-            type: string
       kured:
         additionalProperties: false
         properties:
@@ -2407,6 +2037,18 @@ properties:
             additionalProperties: false
             properties:
               kuredDaemonSet:
+                $ref: '#/definitions/resources'
+      sealed-secrets:
+        additionalProperties: false
+        properties:
+          _rawValues:
+            $ref: '#/definitions/rawValues'
+          enabled:
+            type: boolean
+            default: true
+          resources:
+            properties:
+              operator:
                 $ref: '#/definitions/resources'
       tekton:
         additionalProperties: false
@@ -2480,50 +2122,6 @@ properties:
                 type: string
             required:
               - duration
-          storage:
-            properties:
-              azure:
-                properties:
-                  accountName:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  containerName:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  accountKey:
-                    $ref: '#/definitions/wordCharacterPattern'
-                    x-secret: ''
-              s3:
-                properties:
-                  useInstanceRole:
-                    type: boolean
-                    default: false
-                  bucket:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  s3Url:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  accessKeyId:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  secretAccessKey:
-                    $ref: '#/definitions/wordCharacterPattern'
-                    x-secret: ''
-                  region:
-                    $ref: '#/definitions/wordCharacterPattern'
-              gcs:
-                properties:
-                  bucket:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  project:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  instance:
-                    $ref: '#/definitions/wordCharacterPattern'
-              type:
-                type: string
-                enum:
-                  - azure
-                  - s3
-                  - gcs
-                  - minioLocal
-                  - filesystem
-                default: minioLocal
           v11StartDate:
             description: Set this to a date just after deployment in case of an upgrade. (Otomi started at v9 with filesystem.)
             title: Schema v11 start date
@@ -2541,21 +2139,13 @@ properties:
           apiServer:
             additionalProperties: false
             properties:
-              enabled:
+              create:
                 type: boolean
                 default: true
           extraArgs:
-            type: object
-            description: See https://github.com/kubernetes-sigs/metrics-server for details.
-            default:
-              kubelet-preferred-address-types: InternalIP
+            type: array
           resources:
-            additionalProperties: false
-            properties:
-              api:
-                $ref: '#/definitions/resources'
-              tools:
-                $ref: '#/definitions/resources'
+            $ref: '#/definitions/resources'
       minio:
         additionalProperties: false
         properties:
@@ -2594,44 +2184,6 @@ properties:
                 x-secret: '{{ randAlphaNum 32 | b64enc }}'
       oauth2-proxy-redis:
         $ref: '#/definitions/redisChart'
-      opa-exporter:
-        description: Expose OPA/Gatekeeper Constraint Violations metrics.
-        properties:
-          _rawValues:
-            $ref: '#/definitions/rawValues'
-          enabled:
-            type: boolean
-            default: false
-      opencost:
-        additionalProperties: false
-        properties:
-          _rawValues:
-            $ref: '#/definitions/rawValues'
-          enabled:
-            type: boolean
-            default: false
-          keys:
-            properties:
-              gcp:
-                type: string
-                $ref: '#/definitions/wordCharacterPattern'
-          alerts:
-            properties:
-              enabled:
-                type: boolean
-                default: false
-              costOfAllNodesQuotaPerMonthReached:
-                properties:
-                  quota:
-                    type: integer
-                    default: 500
-          resources:
-            additionalProperties: false
-            properties:
-              exporter:
-                $ref: '#/definitions/resources'
-              ui:
-                $ref: '#/definitions/resources'
       otomi-api:
         additionalProperties: false
         properties:
@@ -2690,6 +2242,36 @@ properties:
             properties:
               operator:
                 $ref: '#/definitions/resources'
+      apl-harbor-operator:
+        additionalProperties: false
+        properties:
+          _rawValues:
+            $ref: '#/definitions/rawValues'
+          resources:
+            additionalProperties: false
+            properties:
+              operator:
+                $ref: '#/definitions/resources'
+      apl-gitea-operator:
+        additionalProperties: false
+        properties:
+          _rawValues:
+            $ref: '#/definitions/rawValues'
+          resources:
+            additionalProperties: false
+            properties:
+              operator:
+                $ref: '#/definitions/resources'
+      apl-keycloak-operator:
+        additionalProperties: false
+        properties:
+          _rawValues:
+            $ref: '#/definitions/rawValues'
+          resources:
+            additionalProperties: false
+            properties:
+              operator:
+                $ref: '#/definitions/resources'
 
       oltp:
         additionalProperties: false
@@ -2714,9 +2296,6 @@ properties:
           remoteWrite:
             properties:
               enabled:
-                type: boolean
-                default: false
-              otomiThanos:
                 type: boolean
                 default: false
               insecureSkipVerify:
@@ -2770,6 +2349,22 @@ properties:
                 $ref: '#/definitions/resources'
               node-exporter:
                 $ref: '#/definitions/resources'
+      rabbitmq:
+        additionalProperties: false
+        properties:
+          _rawValues:
+            $ref: '#/definitions/rawValues'
+          enabled:
+            type: boolean
+            default: false
+          resources:
+            properties:
+              clusterOperator:
+                description: Controller which is used to create RabbitMQ-clusters
+                $ref: '#/definitions/resources'
+              msgTopologyOperator:
+                description: Controller which is used to create RabbitMQ queues and policies
+                $ref: '#/definitions/resources'
       redis-shared:
         allOf:
           - $ref: '#/definitions/redisChart'
@@ -2800,6 +2395,8 @@ properties:
                 $ref: '#/definitions/resources'
               memcached:
                 $ref: '#/definitions/resources'
+              metricsGenerator:
+                $ref: '#/definitions/resources'
           autoscaling:
             properties:
               ingester:
@@ -2817,179 +2414,6 @@ properties:
                   size:
                     default: 10Gi
                     $ref: '#/definitions/size'
-          storage:
-            properties:
-              azure:
-                properties:
-                  accountName:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  containerName:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  accountKey:
-                    $ref: '#/definitions/wordCharacterPattern'
-                    x-secret: ''
-              s3:
-                properties:
-                  bucket:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  s3Url:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  accessKeyId:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  secretAccessKey:
-                    $ref: '#/definitions/wordCharacterPattern'
-                    x-secret: ''
-              type:
-                type: string
-                enum:
-                  - azure
-                  - s3
-                  - minioLocal
-                default: minioLocal
-      thanos:
-        properties:
-          _rawValues:
-            $ref: '#/definitions/rawValues'
-          enabled:
-            type: boolean
-            default: false
-          query:
-            properties:
-              replicaCount:
-                description: Number of Thanos Query replicas.
-                type: integer
-                default: 1
-          receiver:
-            properties:
-              mode:
-                title: Receiver mode
-                description: Mode to run receiver in.
-                type: string
-                default: standalone
-                enum:
-                  - standalone
-                  - dual-mode
-              replicaCount:
-                description: Number of Thanos Receive replicas.
-                type: integer
-                default: 1
-              tsdbRetention:
-                type: string
-                default: 7d
-              replicationFactor:
-                type: integer
-                default: 1
-          compactor:
-            description: Resolution and Retention flags.
-            properties:
-              retentionResolutionRaw:
-                type: string
-                default: 30d
-              retentionResolution5m:
-                type: string
-                default: 30d
-              retentionResolution1h:
-                type: string
-                default: 10y
-          receiverDistributor:
-            properties:
-              enabled:
-                type: boolean
-                default: true
-          ruler:
-            properties:
-              enabled:
-                type: boolean
-                default: false
-          objstore:
-            properties:
-              storageProvider:
-                additionalProperties: false
-                properties:
-                  s3:
-                    properties:
-                      bucket:
-                        type: string
-                        description: Name of the blob container.
-                        $ref: '#/definitions/wordCharacterPattern'
-                      s3Url:
-                        description: The name (URL) of the S3 bucket
-                        $ref: '#/definitions/wordCharacterPattern'
-                      accessKeyId:
-                        type: string
-                        description: The ID of the access key
-                        $ref: '#/definitions/wordCharacterPattern'
-                      secretAccessKey:
-                        type: string
-                        description: The secret of the access key
-                        $ref: '#/definitions/wordCharacterPattern'
-                        x-secret: ''
-                    required:
-                      - bucket
-                      - s3Url
-                      - accessKeyId
-                      - secretAccessKey
-                  azureBlob:
-                    properties:
-                      accountName:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      containerName:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      accountKey:
-                        $ref: '#/definitions/wordCharacterPattern'
-                        x-secret: ''
-                    required:
-                      - accountName
-                      - containerName
-                      - accountKey
-                  type:
-                    type: string
-                    enum:
-                      - s3
-                      - azureBlob
-                      - minioLocal
-                    default: minioLocal
-          resources:
-            additionalProperties: false
-            properties:
-              query:
-                $ref: '#/definitions/resources'
-              queryFrontend:
-                $ref: '#/definitions/resources'
-              receiver:
-                $ref: '#/definitions/resources'
-              storegateway:
-                $ref: '#/definitions/resources'
-              bucketweb:
-                $ref: '#/definitions/resources'
-              compactor:
-                $ref: '#/definitions/resources'
-              receiverDistributor:
-                $ref: '#/definitions/resources'
-              ruler:
-                $ref: '#/definitions/resources'
-        persistence:
-          properties:
-            receiver:
-              properties:
-                size:
-                  $ref: '#/definitions/size'
-                  default: 50Gi
-            storegateway:
-              properties:
-                size:
-                  $ref: '#/definitions/size'
-                  default: 8Gi
-            compactor:
-              properties:
-                size:
-                  $ref: '#/definitions/size'
-                  default: 8Gi
-            ruler:
-              properties:
-                size:
-                  $ref: '#/definitions/size'
-                  default: 8Gi
       trivy:
         properties:
           _rawValues:
@@ -3012,6 +2436,8 @@ properties:
                 $ref: '#/definitions/resources'
       otel:
         properties:
+          _rawValues:
+            $ref: '#/definitions/rawValues'
           enabled:
             type: boolean
             default: false
@@ -3026,10 +2452,15 @@ properties:
                   - deployment
                   - daemonset
                   - statefulset
+              attributes:
+                type: array
+                title: Kubernetes Attributes
+                $ref: '#/definitions/labelsAnnotations'
+                description: 'Attributes to extract metadata from pods'
           operator:
             properties:
               replicaCount:
-                description: Number of Thanos Query replicas.
+                description: Number of replicas.
                 type: integer
                 default: 1
           resources:
@@ -3041,93 +2472,6 @@ properties:
                 $ref: '#/definitions/resources'
               kubeRBACProxy:
                 $ref: '#/definitions/resources'
-      vault:
-        additionalProperties: false
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          logLevel:
-            $ref: '#/definitions/logLevel'
-          seal:
-            description: |
-              Use a KMS to encrypt and decrypt the master key.\n
-              WARNING - You must first copy the keys from the "vault-unseal-keys" secret, and import them to your KMS.\n
-              (enabling this feature will delete the unseal key from the cluster without pushing to external kms!)
-            nullable: true
-            type: object
-            oneOf:
-              - title: gcpckms
-                properties:
-                  gcpckms:
-                    properties:
-                      project:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      region:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      key_ring:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      kmsAccount:
-                        $ref: '#/definitions/wordCharacterPattern'
-                    required:
-                      - project
-                      - region
-                      - key_ring
-                      - kmsAccount
-                required:
-                  - gcpckms
-              - title: awskms
-                properties:
-                  awskms:
-                    properties:
-                      region:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      access_key:
-                        type: string
-                      secret_key:
-                        type: string
-                        x-secret: ''
-                      endpoint:
-                        type: string
-                    required:
-                      - region
-                      - access_key
-                      - secret_key
-                      - endpoint
-                required:
-                  - awskms
-              - title: azurekeyvault
-                properties:
-                  azurekeyvault:
-                    properties:
-                      vault_name:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      tenant_id:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      client_id:
-                        $ref: '#/definitions/wordCharacterPattern'
-                      client_secret:
-                        type: string
-                        x-secret: ''
-                      key_name:
-                        $ref: '#/definitions/wordCharacterPattern'
-                    required:
-                      - vault_name
-                      - tenant_id
-                      - client_id
-                      - client_secret
-                      - key_name
-                required:
-                  - azurekeyvault
-          storage:
-            description: Storage configuration. See https://www.vaultproject.io/docs/configuration/storage.
-            type: object
-          image:
-            properties:
-              tag:
-                $ref: '#/definitions/imageTag'
-          resources:
-            $ref: '#/definitions/resources'
       velero:
         additionalProperties: false
         properties:
@@ -3140,156 +2484,6 @@ properties:
             enabled:
               type: boolean
               default: false
-          cloud:
-            properties:
-              azure:
-                additionalProperties: false
-                description: Azure
-                properties:
-                  resourceGroup:
-                    description: The resource group of the worker nodes (VM's and disks)
-                    $ref: '#/definitions/wordCharacterPattern'
-                  environment:
-                    title: Azure environment
-                    type: string
-                    enum:
-                      - AzurePublicCloud
-                      - AzureChinaCloud
-                      - AzureUSGovernment
-                      - AzureGermanCloud
-                    default: AzurePublicCloud
-                  tenantId:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  subscriptionId:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  aadClientId:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  aadClientSecret:
-                    $ref: '#/definitions/wordCharacterPattern'
-                    x-secret: ''
-                required:
-                  - tenantId
-                  - subscriptionId
-                  - aadClientId
-                  - aadClientSecret
-                  - resourceGroup
-                  - environment
-              aws:
-                additionalProperties: false
-                description: Amazon Web Services
-                properties:
-                  region:
-                    type: string
-                    description: The AWS region where the cluster is running.
-                    $ref: '#/definitions/wordCharacterPattern'
-                  accessKeyId:
-                    type: string
-                    description: The ID of the access key
-                    $ref: '#/definitions/wordCharacterPattern'
-                  secretAccessKey:
-                    type: string
-                    description: The secret of the access key
-                    $ref: '#/definitions/wordCharacterPattern'
-                    x-secret: ''
-              google:
-                additionalProperties: false
-                description: Google Cloud Platform
-                properties:
-                  serviceAccount:
-                    type: string
-                    description: The IAM account with permissions to manage snapshot resources in the GCP Project.
-                    $ref: '#/definitions/wordCharacterPattern'
-                  project:
-                    type: string
-                    description: The name of the GCP project.
-                    $ref: '#/definitions/wordCharacterPattern'
-                  saKeyJson:
-                    type: string
-                    x-secret: ''
-              type:
-                type: string
-                enum:
-                  - aws
-                  - azure
-                  - google
-                  - custom
-                default: custom
-          storage:
-            properties:
-              azureBlob:
-                additionalProperties: false
-                properties:
-                  storageAccount:
-                    type: string
-                    description: The used Azure storage account
-                    $ref: '#/definitions/wordCharacterPattern'
-                  resourceGroup:
-                    type: string
-                    description: The resource group of the storage account
-                    $ref: '#/definitions/wordCharacterPattern'
-                  bucket:
-                    type: string
-                    description: Name of the blob container.
-                    $ref: '#/definitions/wordCharacterPattern'
-                  tenantId:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  subscriptionId:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  aadClientId:
-                    $ref: '#/definitions/wordCharacterPattern'
-                  aadClientSecret:
-                    $ref: '#/definitions/wordCharacterPattern'
-                    x-secret: ''
-                required:
-                  - resourceGroup
-                  - storageAccount
-                  - bucket
-              s3:
-                additionalProperties: false
-                properties:
-                  bucket:
-                    type: string
-                    description: Name of the blob container.
-                    $ref: '#/definitions/wordCharacterPattern'
-                  s3Url:
-                    description: The name (URL) of the S3 bucket
-                    $ref: '#/definitions/wordCharacterPattern'
-                  accessKeyId:
-                    type: string
-                    description: The ID of the access key
-                    $ref: '#/definitions/wordCharacterPattern'
-                  secretAccessKey:
-                    type: string
-                    description: The secret of the access key
-                    $ref: '#/definitions/wordCharacterPattern'
-                    x-secret: ''
-                required:
-                  - bucket
-                  - s3Url
-              gcs:
-                additionalProperties: false
-                properties:
-                  bucket:
-                    type: string
-                    description: Name of the bucket.
-                    $ref: '#/definitions/wordCharacterPattern'
-                  serviceAccount:
-                    description: The name of the GCP service account to use.
-                    $ref: '#/definitions/wordCharacterPattern'
-                  saKeyJson:
-                    type: string
-                    x-secret: ''
-                required:
-                  - bucket
-                  - serviceAccount
-              type:
-                type: string
-                enum:
-                  - azureBlob
-                  - s3
-                  - gcs
-                  - minioLocal
-                default: minioLocal
           logLevel:
             description: Set log-level for the Velero pod.
             default: info
@@ -3406,6 +2600,18 @@ properties:
                   - apiToken
             required:
               - civo
+          - title: Linode
+            additionalProperties: false
+            properties:
+              linode:
+                properties:
+                  apiKey:
+                    type: string
+                    x-secret: ''
+                required:
+                  - apiToken
+            required:
+              - linode
           - title: CloudFlare
             additionalProperties: false
             properties:
@@ -3447,7 +2653,7 @@ properties:
                   external-dns:
                     title: YAML for external-dns.
                     type: object
-                    description: 'The provider config as provided here: https://github.com/redkubes/otomi-core/blob/main/charts/external-dns/values.yaml'
+                    description: 'The provider config as provided here: https://github.com/linode/apl-core/blob/main/charts/external-dns/values.yaml'
                   cert-manager:
                     title: YAML for cert-manager.
                     type: object
@@ -3539,24 +2745,6 @@ properties:
                   - project
             required:
               - google
-          - properties:
-              provider:
-                type: string
-                const: vault
-              vault:
-                properties:
-                  keys:
-                    description: Comma separated list of one or two paths to keys as defined in Vault. One if used for both enc+dec. Two if one for enc, other for dec.
-                    title: Vault keys
-                    type: string
-                  token:
-                    type: string
-                    x-secret: ''
-                required:
-                  - keys
-                  - token
-            required:
-              - vault
   oidc:
     additionalProperties: false
     description: 'Holds many parts used in different locations. Please see keycloak, grafana, istio and oauth-proxy as those are all consuming (parts of) these settings.'
@@ -3627,10 +2815,6 @@ properties:
         required:
           - username
           - password
-      hasCloudLB:
-        default: false
-        description: "Set this to true when a cloud specific ingress controller is wanted/installed that terminates TLS and forwards traffic unencrypted. Otherwise Otomi's Nginx controller will create a loadbalancer that will take care of this."
-        type: boolean
       hasExternalDNS:
         description: Set this to true when an external dns zone is available to manage dns records. (Expects required `dns:` fields to be set.)
         default: false
@@ -3654,205 +2838,6 @@ properties:
         default: latest
         description: 'Best pin this to a valid release version found in the repo.'
         pattern: '(v[0-9]+.[0-9]+.[0-9]+|[a-zA-Z]+[a-zA-Z0-9-])'
-  policies:
-    type: object
-    description: |
-      List of policy objects used by Open Policy Agent tools (Conftest, Gatekeeper) to run policy based validation against both in-cluster Kubernetes contexts and plain Yaml resources
-    additionalProperties: false
-    properties:
-      banned-image-tags:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          tags:
-            type: array
-            items:
-              $ref: '#/definitions/wordCharacterPattern'
-          enabled:
-            type: boolean
-            default: false
-      container-limits:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          cpu:
-            '$ref': '#/definitions/cpuQuantity'
-          memory:
-            '$ref': '#/definitions/memoryQuantity'
-          enabled:
-            type: boolean
-            default: false
-      psp-allowed-repos:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          repos:
-            type: array
-            items:
-              $ref: '#/definitions/wordCharacterPattern'
-          enabled:
-            type: boolean
-            default: false
-      psp-host-filesystem:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          allowedHostPaths:
-            type: array
-            items:
-              type: object
-              required: [pathPrefix, readOnly]
-              properties:
-                pathPrefix:
-                  type: string
-                readOnly:
-                  type: boolean
-              additionalProperties: false
-          enabled:
-            type: boolean
-            default: false
-      psp-allowed-users:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          runAsUser:
-            type: object
-            additionalProperties: false
-            required: [rule]
-            properties:
-              rule:
-                type: string
-                enum: [RunAsAny, MustRunAsNonRoot, MustRunAs]
-              ranges:
-                type: array
-                items:
-                  $ref: '#/definitions/unixOwnerIdRange'
-          runAsGroup:
-            type: object
-            properties:
-              rule:
-                type: string
-                enum: [RunAsAny, MayRunAs, MustRunAs]
-              ranges:
-                type: array
-                items:
-                  $ref: '#/definitions/unixOwnerIdRange'
-          supplementalGroups:
-            type: object
-            properties:
-              rule:
-                type: string
-                enum: [RunAsAny, MayRunAs, MustRunAs]
-              ranges:
-                type: array
-                items:
-                  $ref: '#/definitions/unixOwnerIdRange'
-          fsGroup:
-            type: object
-            properties:
-              rule:
-                type: string
-                enum: [RunAsAny, MayRunAs, MustRunAs]
-              ranges:
-                type: array
-                items:
-                  $ref: '#/definitions/unixOwnerIdRange'
-          enabled:
-            type: boolean
-            default: false
-      psp-host-security:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          enabled:
-            type: boolean
-            default: false
-      psp-host-networking-ports:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          enabled:
-            type: boolean
-            default: false
-      psp-privileged:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          enabled:
-            type: boolean
-            default: false
-      psp-capabilities:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          allowedCapabilities:
-            type: array
-            items:
-              type: string
-          requiredDropCapabilities:
-            type: array
-            items:
-              type: string
-      psp-forbidden-sysctls:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          forbiddenSysctls:
-            type: array
-            items:
-              type: string
-      psp-apparmor:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          allowedProfiles:
-            type: array
-            items:
-              type: string
-      psp-seccomp:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          allowedProfiles:
-            type: array
-            items:
-              type: string
-      psp-selinux:
-        additionalProperties: false
-        required: [enabled]
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          seLinuxContext:
-            type: string
-            enum: [MustRunAs, RunAsAny]
-          allowedSELinuxOptions:
-            type: array
-            items:
-              type: object
-              additionalProperties: false
-              properties:
-                level:
-                  $ref: '#/definitions/wordCharacterPattern'
-                role:
-                  $ref: '#/definitions/wordCharacterPattern'
-                type:
-                  $ref: '#/definitions/wordCharacterPattern'
-                user:
-                  $ref: '#/definitions/wordCharacterPattern'
   ingress:
     properties:
       platformClass:
@@ -3916,10 +2901,40 @@ properties:
                 $ref: '#/definitions/backupRetentionPolicy'
               schedule:
                 $ref: '#/definitions/backupSchedule'
+          gitea:
+            title: Gitea
+            properties:
+              enabled:
+                type: boolean
+                default: false
+              resources:
+                $ref: '#/definitions/resources'
+              retentionPolicy:
+                $ref: '#/definitions/backupRetentionPolicy'
+              schedule:
+                $ref: '#/definitions/backupSchedule'
+          keycloak:
+            title: Keycloak
+            properties:
+              enabled:
+                type: boolean
+                default: false
+              resources:
+                $ref: '#/definitions/resources'
+              retentionPolicy:
+                $ref: '#/definitions/backupRetentionPolicy'
+              schedule:
+                $ref: '#/definitions/backupSchedule'
       persistentVolumes:
         type: object
-        title: PersistentVolumes backups
+        description: Create backups of persistent volumes
+        additionalProperties: false
         properties:
+          linodeApiToken:
+            type: string
+            description: Linode API Token
+            $ref: '#/definitions/wordCharacterPattern'
+            x-secret: ''
           gitea:
             title: Gitea
             properties:
@@ -3930,72 +2945,85 @@ properties:
                 $ref: '#/definitions/backupTtl'
               schedule:
                 $ref: '#/definitions/backupSchedule'
-          drone:
-            title: Drone
+  obj:
+    properties:
+      provider:
+        properties:
+          linode:
+            additionalProperties: false
             properties:
-              enabled:
-                type: boolean
-                default: false
-              ttl:
-                $ref: '#/definitions/backupTtl'
-              schedule:
-                $ref: '#/definitions/backupSchedule'
-          keycloak:
-            title: Keycloak
-            properties:
-              enabled:
-                type: boolean
-                default: false
-              ttl:
-                $ref: '#/definitions/backupTtl'
-              schedule:
-                $ref: '#/definitions/backupSchedule'
+              region:
+                description: The region of the bucket
+                $ref: '#/definitions/wordCharacterPattern'
+              accessKeyId:
+                type: string
+                description: The ID of the access key
+                $ref: '#/definitions/wordCharacterPattern'
+              secretAccessKey:
+                type: string
+                description: The secret of the access key
+                $ref: '#/definitions/wordCharacterPattern'
+                x-secret: ''
+            required:
+              - region
+              - accessKeyId
+              - secretAccessKey
+          type:
+            type: string
+            enum:
+              - minioLocal
+              - linode
+              - disabled
+            default: disabled
+      buckets:
+        properties:
+          loki:
+            type: string
+            $ref: '#/definitions/wordCharacterPattern'
+            default: loki
+          cnpg:
+            type: string
+            $ref: '#/definitions/wordCharacterPattern'
+            default: cnpg
+          velero:
+            type: string
+            $ref: '#/definitions/wordCharacterPattern'
+            default: velero
           harbor:
-            title: Harbor
-            properties:
-              enabled:
-                type: boolean
-                default: false
-              resources:
-                $ref: '#/definitions/resources'
-              ttl:
-                $ref: '#/definitions/backupTtl'
-              schedule:
-                $ref: '#/definitions/backupSchedule'
-          vault:
-            title: Vault
-            properties:
-              enabled:
-                type: boolean
-                default: false
-              ttl:
-                $ref: '#/definitions/backupTtl'
-              schedule:
-                $ref: '#/definitions/backupSchedule'
-          argo:
-            title: ArgoCD
-            properties:
-              enabled:
-                type: boolean
-                default: false
-              ttl:
-                $ref: '#/definitions/backupTtl'
-              schedule:
-                $ref: '#/definitions/backupSchedule'
-          minio:
-            title: Minio
-            properties:
-              enabled:
-                type: boolean
-                default: false
-              ttl:
-                $ref: '#/definitions/backupTtl'
-              schedule:
-                $ref: '#/definitions/backupSchedule'
+            type: string
+            $ref: '#/definitions/wordCharacterPattern'
+            default: harbor
+          tempo:
+            type: string
+            $ref: '#/definitions/wordCharacterPattern'
+            default: tempo
   databases:
     properties:
       keycloak:
         title: Keycloak
+        properties:
+          size:
+            type: string
+          resources:
+            $ref: '#/definitions/resources'
+          replicas:
+            type: integer
+            default: 2
+          imported:
+            type: boolean
+            default: false
+      harbor:
+        title: Harbor
+        properties:
+          size:
+            type: string
+          resources:
+            $ref: '#/definitions/resources'
+          replicas:
+            type: integer
+            default: 2
+      gitea:
+        title: gitea
         properties:
           useOtomiDB:
             type: boolean

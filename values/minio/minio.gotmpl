@@ -64,11 +64,10 @@ provisioning:
       memory: 128Mi
   buckets:
     - name: velero
-    - name: thanos
     - name: loki
     - name: harbor
     - name: tempo
-    - name: database
+    - name: cnpg
   policies:
     - name: otomi-apps
       statements:
@@ -81,12 +80,10 @@ provisioning:
           - s3:ListBucketMultipartUploads
           resources:
           - arn:aws:s3:::velero
-          - arn:aws:s3:::thanos
           - arn:aws:s3:::loki
           - arn:aws:s3:::harbor
           - arn:aws:s3:::tempo
-          - arn:aws:s3:::harbor 
-          - arn:aws:s3:::database
+          - arn:aws:s3:::cnpg
         - effect: Allow
           principal:
             AWS:
@@ -95,11 +92,10 @@ provisioning:
           - s3:ListBucket
           resources:
           - arn:aws:s3:::velero
-          - arn:aws:s3:::thanos
           - arn:aws:s3:::loki
           - arn:aws:s3:::harbor
           - arn:aws:s3:::tempo
-          - arn:aws:s3:::database
+          - arn:aws:s3:::cnpg
           condition:
             StringEquals:
               s3:prefix:
@@ -116,8 +112,7 @@ provisioning:
           - s3:GetObject
           resources:
           - arn:aws:s3:::velero/**
-          - arn:aws:s3:::thanos/**
           - arn:aws:s3:::loki/**
           - arn:aws:s3:::harbor/**
           - arn:aws:s3:::tempo/**
-          - arn:aws:s3:::database/**
+          - arn:aws:s3:::cnpg/**

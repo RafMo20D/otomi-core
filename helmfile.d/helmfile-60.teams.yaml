@@ -108,6 +108,8 @@ releases:
           nameOverride: {{ $teamId }}-po-grafana
           fullnameOverride: {{ $teamId }}-po-grafana
           grafana.ini:
+            "auth.generic_oauth":
+              role_attribute_path: contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'team-admin') && 'Admin' || contains(groups[*], 'team-{{ $teamId }}') && 'Editor'{{ if not ($team | get "managedMonitoring.private" false) }} || 'Viewer'{{- end }}
             server:
               root_url: https://grafana-{{ $teamId }}.{{ $domain }}
           sidecar:
@@ -182,9 +184,6 @@ releases:
                   tag: 'http.path'
                 lokiSearch:
                   datasourceUid: 'loki'
-    {{- if ($team | get "azureMonitor" ($v | get "azure.monitor" nil)) }}
-            - {{- tpl (readFile "../helmfile.d/snippets/azure-monitor.gotmpl") ($team | get "azureMonitor" ($v | get "azure.monitor")) | toString | nindent 14 }}
-    {{- end }}
     {{- if has "msteams" ($team | get "alerts.receivers" list) }}
   - name: prometheus-msteams-{{ $teamId }}
     installed: {{ $team | get "managedMonitoring.prometheus" false }}
@@ -219,9 +218,6 @@ releases:
         team: {{ $teamId }}
         folders:
           - k8s-teams
-          {{- if $v.apps.gatekeeper.enabled }}
-          - gatekeeper-teams
-          {{- end }}
           {{- if $v.apps.falco.enabled }}
           - falco-teams
           {{- end }}
@@ -248,6 +244,7 @@ releases:
         oidc: {{- $v | get "oidc" dict | toYaml | nindent 10 }}
         domain: {{ $domain }}
         ingress: {{- $v.ingress | toYaml | nindent 10 }}
+        dns: {{- $v.dns | toYaml | nindent 10 }}
       - {{- omit $team "apps" | toYaml | nindent 8 }}
         teamId: {{ $teamId }}
         teamIds: {{- toYaml (keys $v.teamConfig) | nindent 10 }}
@@ -256,29 +253,5 @@ releases:
       - name: blackbox
         svc: prometheus-blackbox-exporter
         port: 9115
-  {{- end }}
-  {{- range $job := $team | get "jobs" list }}
-  - name: job-{{ $teamId }}-{{ $job.name }}
-    installed: {{ $job.enabled }}
-    namespace: team-{{ $teamId }}
-    chart: ../charts/jobs
-    labels:
-      group: jobs
-      tag: teams
-      team: {{ $teamId }}
-      pipeline: otomi-task-teams
-    hooks:
-      - events: [presync]
-        showlogs: true
-        command: ../bin/job-presync.sh
-        args:
-          - job-{{ $teamId }}-{{ $job.name }}
-          {{- if hasKey $job "runPolicy" }}
-          - "{{ $job.runPolicy }}"    
-          {{- end }}
-    values:
-      - teamSecrets: {{- $team | get "secrets" nil | toYaml | nindent 10 }}
-        teamId: {{ $teamId }}
-      - {{- $job | toYaml | nindent 8 }}
   {{- end }}
 {{- end }}

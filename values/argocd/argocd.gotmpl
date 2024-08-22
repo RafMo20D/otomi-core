@@ -1,0 +1,117 @@
+{{- $v := .Values }}
+{{- $a := $v.apps.argocd }}
+{{- $k := $v.apps.keycloak }}
+global:
+  domain: argocd.{{ $v.cluster.domainSuffix }}
+  {{- with $v.otomi | get "nodeSelector" nil }}
+  nodeSelector:
+    {{- range $key, $val := . }}
+    {{ $key }}: {{ $val }}
+    {{- end }}
+  {{- end }}
+# ApplicationSet Controller
+applicationSet:
+  replicas: {{ $a.applicationSet.replicas }} 
+  resources: {{- $a.resources.applicationSet | toYaml | nindent 4 }}
+
+# Application Controller
+controller:
+  replicas: {{ $a.controller.replicas }} 
+  resources: {{- $a.resources.controller | toYaml | nindent 4 }}
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: true
+  resources: {{- $a.resources.notifications | toYaml | nindent 4 }}
+
+redis:
+  resources: {{- $a.resources.redis | toYaml | nindent 4 }}
+
+repoServer:
+  autoscaling:
+    enabled: {{ $a.autoscaling.repoServer.enabled }}
+    maxReplicas: {{ $a.autoscaling.repoServer.maxReplicas }}
+    minReplicas: {{ $a.autoscaling.repoServer.minReplicas }}
+    targetMemoryUtilizationPercentage: {{ $a.autoscaling.repoServer.targetMemoryUtilizationPercentage }}
+    targetCPUUtilizationPercentage: {{ $a.autoscaling.repoServer.targetCPUUtilizationPercentage }}
+  resources: {{- $a.resources.repo | toYaml | nindent 4 }}
+
+server:
+  autoscaling:
+    enabled: {{ $a.autoscaling.server.enabled }}
+    maxReplicas: {{ $a.autoscaling.server.maxReplicas }}
+    minReplicas: {{ $a.autoscaling.server.minReplicas }}
+    targetMemoryUtilizationPercentage: {{ $a.autoscaling.server.targetMemoryUtilizationPercentage }}
+    targetCPUUtilizationPercentage: {{ $a.autoscaling.server.targetCPUUtilizationPercentage }}
+  resources: {{- $a.resources.server | toYaml | nindent 4 }}
+
+configs:
+  # General Argo CD configuration
+  ## Ref: https://github.com/argoproj/argo-cd/blob/master/docs/operator-manual/argocd-cm.yaml
+  cm:
+    admin.enabled: "true"
+    application.instanceLabelKey: app.kubernetes.io/instance
+    application.resourceTrackingMethod: annotation
+    ga.anonymizeusers: "false"
+    statusbadge.enabled: "false"
+    url: https://argocd.{{ $v.cluster.domainSuffix }}
+    users.anonymous.enabled: "false"
+    # Note that the clientSecret is not actually used
+    # as for now oauth2-proxy handles the login
+    resource.compareoptions: |
+        # disables status field diffing in specified resource types
+        ignoreAggregatedRoles: true
+    resource.exclusions: |
+        - apiGroups:
+          - "*"
+          kinds:
+          - "TaskRun"
+          clusters:
+          - "*"
+    resource.customizations.knownTypeFields.cert-manager.io_Certificate: |
+        - field: spec.duration
+          type: meta/v1/Duration
+    oidc.config: |
+      name: Otomi
+      issuer: {{ $v._derived.oidcBaseUrl }}
+      clientID: {{ $k.idp.clientID }}
+      clientSecret: '$oidc.clientSecret'
+      requestedScopes:
+        - openid
+        - profile
+        - email
+      {{- if $v._derived.untrustedCA }}
+      rootCA: |
+        {{- $v._derived.caCert | nindent 8 }}
+      {{- end }}
+
+  {{- if $v._derived.untrustedCA }}
+  tls:
+    certificates:
+      gitea.{{ $v.cluster.domainSuffix }}: |
+        {{- $v._derived.caCert | nindent 8 }}
+  {{- end }}
+
+  secret:
+    extra:
+      oidc.clientSecret: {{ $k.idp.clientSecret }}
+  params:
+    server.insecure: true # nginx terminates tls
+
+  rbac:
+    policy.csv: |
+      # image updater
+      p, role:image-updater, applications, get, */*, allow
+      p, role:image-updater, applications, update, */*, allow
+      g, image-updater, role:image-updater
+      # admin
+      g, admin, role:admin
+    {{- if $v.otomi.isMultitenant }}
+    policy.default: ''
+    {{- else }}
+      # not multitenant, make team-admin admin and keep global read-only
+      g, team-admin, role:admin
+    policy.default: role:readonly
+    {{- end }}

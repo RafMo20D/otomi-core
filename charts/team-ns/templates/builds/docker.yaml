@@ -30,9 +30,29 @@ spec:
       value: {{ .mode.docker.repoUrl }}
     - name: revision
       value: {{ .mode.docker.revision }}
+  {{- if .scanSource }}
+  - name: grype-code-scan
+    taskRef:
+      name: grype
+      kind: Task
+    runAfter:
+      - fetch-source
+    params:
+      - name: ARGS
+        value:
+          - dir:.
+          - --name={{ .name }}
+    workspaces:
+      - name: source-dir
+        workspace: shared-data
+  {{- end }}
   - name: build-push
-    runAfter: 
-    - fetch-source
+    runAfter:
+      {{- if .scanSource }}
+      - grype-code-scan
+      {{- else }}
+      - fetch-source
+      {{- end }}
     taskRef:
       kind: Task
       name: kaniko
@@ -48,6 +68,13 @@ spec:
       value: {{ $context }}
     - name: IMAGE
       value: harbor.{{ $v.cluster.domainSuffix }}/team-{{ $v.teamId }}/{{ .name }}:{{ .tag }}
+    {{- with (dig "mode" "docker" "envVars" nil . ) }}
+    - name: EXTRA_ARGS
+      value: 
+        {{- range . }}
+        - --build-arg={{ .name }}={{ .value }}
+        {{- end }}
+    {{- end }}
 ---
 {{- if .trigger }}
 apiVersion: triggers.tekton.dev/v1alpha1
@@ -66,6 +93,7 @@ spec:
           {{- include "team-ns.chart-labels" $ | nindent 10 }}
         annotations:
           sidecar.istio.io/inject: "false"
+          argocd.argoproj.io/compare-options: IgnoreExtraneous
       spec:
         pipelineRef:
           name: docker-build-{{ .name }}
@@ -104,6 +132,7 @@ metadata:
   name: docker-build-{{ .name }}-{{ regexReplaceAll "[|._]{1}" .tag "-" }}
   annotations:
     sidecar.istio.io/inject: "false"
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
   labels: {{- include "team-ns.chart-labels" $ | nindent 4 }}
 spec:
   pipelineRef:

@@ -1,12 +1,11 @@
 apps:
     prometheus:
-        enabled: true
+        enabled: false
         disabledRules:
             - InfoInhibitor
             - PrometheusOperatorListErrors
         remoteWrite:
             enabled: true
-            otomiThanos: false
             rwConfig:
                 basicAuth:
                     enabled: true

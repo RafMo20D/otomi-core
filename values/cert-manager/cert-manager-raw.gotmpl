@@ -25,6 +25,8 @@ resources:
       secret: "{{ $p.civo.apiToken | b64enc }}"
       {{- else if hasKey $p "cloudflare" }}
       secret: "{{ $p.cloudflare.apiToken | b64enc }}"
+      {{- else if hasKey $p "linode" }}
+      secret: "{{ $p.linode.apiToken | b64enc }}"
       {{- end }}
 {{- end }}
   - apiVersion: cert-manager.io/v1
@@ -118,6 +120,14 @@ resources:
                   secretKey: secret
                   secretName: external-dns
               {{- end }}
+              {{- with $p | get "linode" nil }}
+              webhook:
+                solverName: "linode"
+                groupName: acme.slicen.me
+                config:
+                  secretKey: secret
+                  secretName: external-dns
+              {{- end }}
               {{- with $p | get "google" nil }}
               cloudDNS:
                 project: {{ .project }}
@@ -134,7 +144,7 @@ resources:
     kind: Secret
     metadata:
       name: otomi-byo-wildcard-cert
-      namespace: {{ if $v.otomi.hasCloudLB }}ingress{{ else }}istio-system{{ end }}
+      namespace: istio-system
     type: kubernetes.io/tls
     data:
       tls.crt: {{ $cm.byoWildcardCert | b64enc }}
@@ -145,7 +155,7 @@ resources:
     kind: Certificate
     metadata:
       name: otomi-wildcard
-      namespace: {{ if $v.otomi.hasCloudLB }}ingress{{ else }}istio-system{{ end }}
+      namespace: istio-system
     spec:
       secretName: otomi-cert-manager-wildcard-cert
       commonName: '*.{{ $v.cluster.domainSuffix }}'

@@ -1,7 +1,7 @@
 {
   "author": "RedKubes",
   "bugs": {
-    "url": "https://github.com/redkubes/otomi-core/issues"
+    "url": "https://github.com/linode/apl-core/issues"
   },
   "config": {
     "commitizen": {
@@ -29,6 +29,7 @@
     "node-forge": "0.10.0",
     "semver": "7.5.2",
     "tar": "6.1.11",
+    "uuid": "^9.0.1",
     "validator": "13.7.0",
     "yaml": "^2.2.2",
     "yargs": "17.5.1",
@@ -75,7 +76,7 @@
     "jest-ts-auto-mock": "2.1.0",
     "json-schema-to-typescript": "10.1.5",
     "json2ts": "0.0.7",
-    "jsonpath": "1.1.1",
+    "jsonpath": "^1.1.1",
     "lint-staged": "10.5.4",
     "npm-run-all": "4.1.5",
     "prettier": "2.7.1",
@@ -93,7 +94,7 @@
     "npm": ">=8.0.0 <9.0.0",
     "node": ">=16.0.0 <17.0.0"
   },
-  "homepage": "https://github.com/redkubes/otomi-core#readme",
+  "homepage": "https://github.com/linode/apl-core#readme",
   "license": "Apache-2.0",
   "lint-staged": {
     "*.{json,yml,yaml}": [
@@ -104,38 +105,40 @@
     ]
   },
   "main": "src/otomi.ts",
-  "name": "otomi-core",
+  "name": "apl-core",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/redkubes/otomi-core.git"
+    "url": "git+https://github.com/linode/apl-core.git"
   },
   "run-if-changed": {
     "package-lock.json": "npm install --prefer-offline --no-audit",
     "values-schema.yaml": "npm run gen:chart-schema"
   },
   "scripts": {
-    "app-versions:csv": "echo 'name,appVersion,chartVersion'; for f in $(find charts -name Chart.yaml -type f -maxdepth 2| sort); do yq eval -o=json $f | jq -rc '. | [.name, .appVersion, .version] | @csv' | tr -d '\"'; done",
+    "install-deps": "bin/install-deps.sh",
+    "app-versions:csv": "echo 'name,appVersion,chartVersion'; for f in $(find charts -name Chart.yaml -type f -maxdepth 2| sort); do yq e -o=json -I=0 $f | jq -rc '. | [.name, .appVersion, .version] | @csv' | tr -d '\"'; done",
     "adr": "adr-log -d adr -i",
-    "check-policies": "NODE_ENV=test binzx/otomi check-policies",
+    "check-policies": "ENV_DIR=$PWD/tests/fixtures NODE_ENV=test binzx/otomi check-policies",
     "clean": "rm -rf dist >/dev/null",
     "compile": "npm run clean && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json -v --dir dist && chmod +x ./dist/src/otomi.js",
     "compile:watch": "npm run compile && tsc -w",
     "cz": "git-cz",
     "cz:retry": "git-cz -- --retry",
+    "dev:bootstrapCoreApp": "ts-node src/dev/bootstrapCoreApp.ts",
     "eslint": "eslint --ext ts .",
     "eslint:fix": "eslint --fix --ext ts .",
     "format": "prettier --check \"**/*.{json,md,yml,yaml}\"",
     "format:fix": "prettier --write \"**/*.{json,md,yml,yaml}\"",
-    "gen:chart-schema": "js-yaml values-schema.yaml > chart/otomi/values.schema.json",
+    "gen:chart-schema": "js-yaml values-schema.yaml > chart/apl/values.schema.json",
     "lint": "run-p spellcheck lint:hf lint:ts lint:types",
     "lint-staged": "lint-staged",
     "lint:fix": "prettier --write tests/**/*.yaml --write '.values/env/**/*.yaml' && npm run lint:ts:fix",
-    "lint:hf": "NODE_ENV=test binzx/otomi lint",
+    "lint:hf": "ENV_DIR=$PWD/tests/fixtures NODE_ENV=test binzx/otomi lint",
     "lint:ts": "eslint --ext ts src",
     "lint:ts:fix": "eslint --fix --ext ts src",
     "lint:types": "tsc --noEmit",
-    "migrate-values": "ENV_DIR=$PWD/.values binzx/otomi migrate -ni && ENV_DIR=$PWD/tests/fixtures binzx/otomi migrate -ni",
+    "migrate-values": "ENV_DIR=$PWD/tests/fixtures binzx/otomi migrate -ni",
     "prepare": "husky install",
     "release": "standard-version",
     "release:github": "github-release-from-changelog",
@@ -145,13 +148,13 @@
     "server": "binzx/otomi server",
     "spellcheck": "cspell '/docs/**/**.md' '/values-schema.yaml' '/*.md' '/.values/README.md'",
     "tasks:copy-certs": "binzx/otomi task -n copyCerts",
-    "test": "run-s test:ts lint validate-values validate-templates check-policies",
+    "test": "run-s test:ts lint validate-values validate-templates bootstrap-dev",
     "test:opa": "NODE_ENV=test binzx/otomi x opa test policies -v",
-    "test:ts": "NODE_ENV=test jest",
+    "test:ts": "ENV_DIR=$PWD/tests/fixtures NODE_ENV=test jest",
     "test:ts-cov": "jest --coverage",
-    "validate-templates": "NODE_ENV=test binzx/otomi validate-templates",
-    "validate-templates:all": "set -e; i=25; while [ $i -le 27 ]; do NODE_ENV=test binzx/otomi validate-templates -k 1.$i; i=$(($i+1)); done",
-    "validate-values": "NODE_ENV=test binzx/otomi validate-values",
+    "validate-templates": "ENV_DIR=$PWD/tests/fixtures NODE_ENV=test binzx/otomi validate-templates",
+    "validate-templates:all": "set -e; i=25; while [ $i -le 29 ]; do NODE_ENV=test binzx/otomi validate-templates -k 1.$i; i=$(($i+1)); done",
+    "validate-values": "ENV_DIR=$PWD/tests/fixtures NODE_ENV=test binzx/otomi validate-values",
     "bootstrap-dev": "rm -rf /tmp/otomi-bootstrap-dev; CI=1 VALUES_INPUT=$PWD/tests/bootstrap/input.yaml ENV_DIR=/tmp/otomi-bootstrap-dev binzx/otomi bootstrap",
     "bootstrap-dev-with-repo": "CI=1 ENV_DIR=/tmp/otomi-bootstrap-dev binzx/otomi bootstrap"
   },
@@ -161,5 +164,5 @@
     }
   },
   "type": "commonjs",
-  "version": "2.1.0"
+  "version": "2.11.0"
 }

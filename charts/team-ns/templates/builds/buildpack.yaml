@@ -29,12 +29,31 @@ spec:
       value: {{ .mode.buildpacks.repoUrl }}
     - name: revision
       value: {{ .mode.buildpacks.revision }}
+  {{- if .scanSource }}
+  - name: grype-code-scan
+    taskRef:
+      name: grype
+      kind: Task
+    runAfter:
+      - fetch-source
+    params:
+      - name: ARGS
+        value:
+          - dir:.
+    workspaces:
+      - name: source-dir
+        workspace: shared-data
+  {{- end }}
   - name: buildpacks
     taskRef:
       kind: Task
       name: buildpacks
     runAfter:
+      {{- if .scanSource }}
+      - grype-code-scan
+      {{- else }}
       - fetch-source
+      {{- end }}
     workspaces:
     - name: source
       workspace: shared-data
@@ -43,10 +62,21 @@ spec:
     params:
     - name: APP_IMAGE
       value: harbor.{{ $v.cluster.domainSuffix }}/team-{{ $v.teamId }}/{{ .name }}:{{ .tag }}
+    {{- with .mode.buildpacks.path }}
     - name: SOURCE_SUBPATH
-      value: {{ .mode.buildpacks.path }}
+      value: {{ . }}
+    {{- end }}
     - name: BUILDER_IMAGE
-      value: paketobuildpacks/builder:full
+      value: paketobuildpacks/builder-jammy-full:latest
+    - name: USER_ID
+      value: "1001"
+      {{- with (dig "mode" "buildpacks" "envVars" nil . ) }}
+    - name: ENV_VARS
+      value: 
+        {{- range . }}
+        - {{ .name }}={{ .value }}
+        {{- end }}
+      {{- end }}
 ---
 {{- if .trigger }}
 apiVersion: triggers.tekton.dev/v1alpha1
@@ -65,6 +95,7 @@ spec:
           {{- include "team-ns.chart-labels" $ | nindent 10 }}
         annotations:
           sidecar.istio.io/inject: "false"
+          argocd.argoproj.io/compare-options: IgnoreExtraneous
       spec:
         pipelineRef:
           name: buildpacks-build-{{ .name }}
@@ -103,6 +134,7 @@ metadata:
   name: buildpacks-build-{{ .name }}-{{ regexReplaceAll "[|._]{1}" .tag "-" }}
   annotations:
     sidecar.istio.io/inject: "false"
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
   labels: {{- include "team-ns.chart-labels" $ | nindent 4 }}
 spec:
   pipelineRef:

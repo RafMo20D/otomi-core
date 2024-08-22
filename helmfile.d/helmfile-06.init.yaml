@@ -18,12 +18,6 @@ releases:
     labels:
       pkg: keycloak
     <<: *rawCR
-  - name: argocd-operator-cr
-    installed: {{ $a | get "argocd.enabled" }}
-    namespace: argocd
-    labels:
-      pkg: argocd
-    <<: *rawCR
   - name: cert-manager
     installed: true
     namespace: cert-manager
@@ -39,12 +33,5 @@ releases:
     values:
       - ../values/istio-operator/istio-operator-raw.gotmpl
       - snippets/common.gotmpl
-  - name: external-secrets-artifacts
-    installed: {{ $a | get "external-secrets.enabled" }}
-    disableValidationOnInstall: true
-    namespace: external-secrets
-    labels:
-      pkg: external-secrets
-      group: secrets
-    <<: *raw
+
 

@@ -24,7 +24,7 @@ resources:
     memory: 256Mi
 {{- end }}
 
-{{- tpl (readFile "../../helmfile.d/snippets/job.gotmpl") (dict "item" "api" "v" $v "skipScript" true) }}
+{{- tpl (readFile "../../helmfile.d/snippets/job.gotmpl") (dict "repositoryPrefix" "linode/apl-" "item" "api" "v" $v "skipScript" true) }}
 
 secrets:
   GIT_USER: otomi-admin
@@ -46,7 +46,6 @@ env:
   CUSTOM_ROOT_CA: |
     {{- $v._derived.caCert | nindent 4 }}
   {{- end }}
-  IN_DOCKER: '1'
   EDITOR_INACTIVITY_TIMEOUT: {{ $o.editorInactivityTimeout }}
   DRONE_WEBHOOK_SECRET: {{ $d | get "sharedSecret" }}
 
