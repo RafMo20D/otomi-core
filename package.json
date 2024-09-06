@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "9.0.9",
-    "@kubernetes/client-node": "0.16.3",
+    "@kubernetes/client-node": "0.21.0",
     "@types/deep-diff": "1.0.1",
     "@types/semver": "7.3.10",
     "ajv": "8.11.0",
@@ -33,7 +33,7 @@
     "validator": "13.7.0",
     "yaml": "^2.2.2",
     "yargs": "17.5.1",
-    "zx": "4.3.0"
+    "zx": "8.0.0"
   },
   "description": "Otomi Core is an opinionated stack of Kubernetes apps and configurations. Part of Otomi Container Platform.",
   "devDependencies": {
