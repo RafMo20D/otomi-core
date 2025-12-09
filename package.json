@@ -26,11 +26,11 @@
     "ignore-walk": "3.0.4",
     "lodash": "4.17.21",
     "node-fetch": "2.6.7",
-    "node-forge": "0.10.0",
+    "node-forge": "1.3.2",
     "semver": "7.5.2",
     "tar": "6.1.11",
     "uuid": "^9.0.1",
-    "validator": "13.7.0",
+    "validator": "13.15.22",
     "yaml": "^2.2.2",
     "yargs": "17.5.1",
     "zx": "4.3.0"
