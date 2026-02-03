@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "9.0.9",
-    "@kubernetes/client-node": "0.16.3",
+    "@kubernetes/client-node": "0.21.0",
     "@types/deep-diff": "1.0.1",
     "@types/semver": "7.3.10",
     "ajv": "8.11.0",
@@ -28,7 +28,7 @@
     "node-fetch": "2.6.7",
     "node-forge": "0.10.0",
     "semver": "7.5.2",
-    "tar": "6.1.11",
+    "tar": "7.5.7",
     "uuid": "^9.0.1",
     "validator": "13.7.0",
     "yaml": "^2.2.2",
